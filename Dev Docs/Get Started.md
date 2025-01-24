@@ -7,4 +7,3 @@
 ##### Autopilot Firmware (Requires Drone)
 - PX4
 	- [Install PX4 Software](https://docs.px4.io/v1.15/en/config/firmware.html#installing-px4-main-beta-or-custom-firmware)
-	- 

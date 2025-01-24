@@ -159,11 +159,13 @@
       "canvas:Create new canvas": false,
       "daily-notes:Open today's daily note": false,
       "templates:Insert template": false,
-      "command-palette:Open command palette": false
+      "command-palette:Open command palette": false,
+      "obsidian-git:Open Git source control": false
     }
   },
-  "active": "d2794a57322195fe",
+  "active": "541775905bc792cc",
   "lastOpenFiles": [
+    "poc_code",
     "Dev Docs/Get Started.md",
     "Dev Docs"
   ]
