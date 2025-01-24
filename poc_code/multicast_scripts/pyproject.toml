@@ -1,8 +1,11 @@
 [project]
 name = "ghost-shield-mc-app"
 version = "0.1.0"
-description = "Multicast Socket Project"
+description = "Multicast Client and Server script"
 readme = "README.md"
+authors = [
+    { name = "Phillip Dickey", email = "pdickey@gmu.edu" }
+]
 requires-python = ">=3.11"
 
 dependencies = [

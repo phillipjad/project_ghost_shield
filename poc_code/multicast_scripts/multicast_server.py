@@ -17,8 +17,6 @@ def main() -> None:
     )
     multicast_server.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, mcast_ttl)
 
-    multicast_server.bind(("", mcast_port))
-
     str_message = "Hello World!"
     str_message_len = len(str_message)
     message = struct.pack(

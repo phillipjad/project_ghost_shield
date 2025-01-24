@@ -1,0 +1,27 @@
+[project]
+name = "repulsive-force-algorithm"
+version = "0.1.0"
+description = ""
+readme = "README.md"
+authors = [
+    { name = "Phillip Dickey", email = "pdickey@gmu.edu" }
+]
+requires-python = ">=3.11"
+
+dependencies = [
+    "ruff~=0.9.3",
+]
+
+[tool.ruff.lint]
+select = [
+    "F",
+    "E",
+    "W",
+    "C90",
+    "I",
+    "N",
+    "UP",
+    "ANN",
+    "ASYNC",
+    "C4",
+]
