@@ -163,12 +163,19 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "541775905bc792cc",
+  "active": "d2794a57322195fe",
   "lastOpenFiles": [
-    "Dev Docs/Get Started.md",
+    "dev_docs/snips",
+    "Untitled",
+    "poc_code/multicast_client/uv.lock",
+    "poc_code/multicast_client/multicast_server.py",
+    "poc_code/multicast_client/multicast_client.py",
+    "poc_code/multicast_client/pyproject.toml",
+    "poc_code/multicast_client/hello.py",
+    "dev_docs/Get Started.md",
     "poc_code/multicast_client/README.md",
     "poc_code/multicast_client",
     "poc_code",
-    "Dev Docs"
+    "dev_docs"
   ]
 }

@@ -11,4 +11,6 @@
 	- uv
 		- Install using `pipx install uv`
 - Setting up uv environment
-	- Initial environment created already but follow below instructions to enable virtual environment on your machine
+	- After installing uv run `uv venv --python 3.11`
+	- Run `source .venv/bin/activate`
+	- Your uv venv should now be setup as indicated by the environment name surrounded by parentheses in your terminal
