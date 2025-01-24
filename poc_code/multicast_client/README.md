@@ -12,7 +12,7 @@
 		-  Install using `pip install pipx`
 	- uv
 		- Install using `pipx install uv`
-- Setting up uv environment
+- Setting up uv environment (do this in git bash)
 	- After installing uv run `uv venv --python 3.11`
 	- Run `source .venv/Scripts/activate`
 	- Your uv venv should now be setup as indicated by the environment name surrounded by parentheses in your terminal![[Pasted image 20250124145031.png]]
