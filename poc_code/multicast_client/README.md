@@ -11,4 +11,4 @@
 	- uv
 		- Install using `pipx install uv`
 - Setting up uv environment
-- 
+	- Initial environment created already but follow below instructions to enable virtual environment on your machine
