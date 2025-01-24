@@ -1,4 +1,6 @@
 ### Environment Setup
+- Forewarning
+	- All instructions described below are for a Windows machine
 - Python Installation
 	- Ensure Python >=3.11 is installed
 	- [Download Python](https://www.python.org/downloads/)
@@ -12,5 +14,5 @@
 		- Install using `pipx install uv`
 - Setting up uv environment
 	- After installing uv run `uv venv --python 3.11`
-	- Run `source .venv/bin/activate`
-	- Your uv venv should now be setup as indicated by the environment name surrounded by parentheses in your terminal
+	- Run `source .venv/Scripts/activate`
+	- Your uv venv should now be setup as indicated by the environment name surrounded by parentheses in your terminal![[Pasted image 20250124145031.png]]
