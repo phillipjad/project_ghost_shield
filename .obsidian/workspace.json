@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Dev Docs/Get Started.md",
+                "file": "poc_code/multicast_client/README.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Get Started"
+              "title": "README"
             }
           }
         ]
@@ -93,7 +93,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Dev Docs/Get Started.md",
+                "file": "poc_code/multicast_client/README.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -103,7 +103,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for Get Started"
+              "title": "Backlinks for README"
             }
           },
           {
@@ -112,12 +112,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Dev Docs/Get Started.md",
+                "file": "poc_code/multicast_client/README.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from Get Started"
+              "title": "Outgoing links from README"
             }
           },
           {
@@ -139,10 +139,10 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Dev Docs/Get Started.md"
+                "file": "poc_code/multicast_client/README.md"
               },
               "icon": "lucide-list",
-              "title": "Outline of Get Started"
+              "title": "Outline of README"
             }
           }
         ]
@@ -165,9 +165,10 @@
   },
   "active": "541775905bc792cc",
   "lastOpenFiles": [
+    "Dev Docs/Get Started.md",
+    "poc_code/multicast_client/README.md",
     "poc_code/multicast_client",
     "poc_code",
-    "Dev Docs/Get Started.md",
     "Dev Docs"
   ]
 }
