@@ -11,10 +11,14 @@
             "id": "541775905bc792cc",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "dev_docs/Get Started.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "New tab"
+              "title": "Get Started"
             }
           }
         ]
@@ -84,36 +88,17 @@
         "type": "tabs",
         "children": [
           {
-            "id": "96679d3cc3ce88b2",
-            "type": "leaf",
-            "state": {
-              "type": "backlink",
-              "state": {
-                "file": "poc_code/multicast_client/README.md",
-                "collapseAll": false,
-                "extraContext": false,
-                "sortOrder": "alphabetical",
-                "showSearch": false,
-                "searchQuery": "",
-                "backlinkCollapsed": false,
-                "unlinkedCollapsed": true
-              },
-              "icon": "links-coming-in",
-              "title": "Backlinks for README"
-            }
-          },
-          {
             "id": "e811dbf3b9897964",
             "type": "leaf",
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "poc_code/multicast_client/README.md",
+                "file": "dev_docs/Get Started.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from README"
+              "title": "Outgoing links from Get Started"
             }
           },
           {
@@ -139,6 +124,25 @@
               },
               "icon": "lucide-list",
               "title": "Outline of README"
+            }
+          },
+          {
+            "id": "96679d3cc3ce88b2",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "dev_docs/Get Started.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for Get Started"
             }
           }
         ]
