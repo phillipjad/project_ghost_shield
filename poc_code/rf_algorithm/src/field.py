@@ -21,26 +21,27 @@ class Field:
 
     def drones_are_equidistant(self) -> bool:
         drones_equidistant = True
-        num_drones = len(self.drones)
-        cloned_drones = copy.deepcopy(self.drones)
-        for _ in range(num_drones):
-            prev_distance = -1
-            temp_drone = cloned_drones.pop()
-            for drone in cloned_drones:
-                if prev_distance == -1:
-                    prev_distance = temp_drone.calc_distance_between_drones(drone)
-                    continue
-                if prev_distance == temp_drone.calc_distance_between_drones(drone):
-                    continue
-                else:
-                    drones_equidistant = False
-                    break
-            if drones_equidistant:
-                continue
-            else:
-                break
+        prev_distance = -1
+        for drone in self.drones:
+            for other_drone in self.drones:
+                if drone is not other_drone:
+                    if prev_distance == drone.calc_distance_between_drones(other_drone):
+                        continue 
+                    elif prev_distance == -1:
+                        prev_distance = drone.calc_distance_between_drones(other_drone)
+                        continue 
+                    else:
+                        drones_equidistant = False
+                        break
         return drones_equidistant
 
+    def space_drones(self) -> None:
+        for drone in self.drones:
+            for other_drone in self.drones:
+                if drone is not other_drone:
+                    pass
+            
+            
 
 
     def __str__(self) -> str:

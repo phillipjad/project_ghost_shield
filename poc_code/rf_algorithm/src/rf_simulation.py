@@ -11,6 +11,7 @@ def main():
     drone_field.randomly_place_drones()
     print(drone_field)
     while drone_field.drones_are_equidistant() is not True:
+        drone_field.space_drones()
         print("whoops")
         sleep(1)
 
