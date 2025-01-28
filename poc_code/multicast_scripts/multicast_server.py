@@ -16,6 +16,7 @@ def main() -> None:
         socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton("0.0.0.0")
     )
     multicast_server.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, mcast_ttl)
+    multicast_server.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_IF, socket.inet_aton(mcast_grp))
 
     str_message = "Hello World!"
     str_message_len = len(str_message)
