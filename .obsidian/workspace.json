@@ -13,7 +13,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "poc_code/rf_algorithm/README.md",
+                "file": "poc_code/multicast_scripts/README.md",
                 "mode": "source",
                 "source": false
               },
@@ -166,6 +166,8 @@
   "active": "541775905bc792cc",
   "lastOpenFiles": [
     "poc_code/README.md",
+    "README.md",
+    "poc_code/rf_algorithm/README.md",
     "dev_docs/Get Started.md",
     "dev_docs/snips/Pasted image 20250124145031.png",
     "dev_docs/snips",
