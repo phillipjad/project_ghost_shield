@@ -5,7 +5,7 @@ import struct
 
 
 def main() -> None:
-    mcast_grp = "224.0.0.1"
+    mcast_grp = "239.255.255.250"
     mcast_port = 12345
 
     multicast_client = socket.socket(
@@ -13,7 +13,7 @@ def main() -> None:
     )
     multicast_client.settimeout(5.0)
     multicast_client.bind(("", mcast_port))
-    mreq = struct.pack("4sl", socket.inet_aton(mcast_grp), socket.INADDR_ANY)
+    mreq = struct.pack("4s4s", socket.inet_aton(mcast_grp), socket.inet_aton(mcast_grp))
     multicast_client.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
     multicast_client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     

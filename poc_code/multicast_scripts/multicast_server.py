@@ -4,9 +4,9 @@ from time import sleep
 
 
 def main() -> None:
-    mcast_grp = "224.0.0.1"
+    mcast_grp = "239.255.255.250"
     mcast_port = 12345
-    mcast_ttl = b"2"
+    mcast_ttl = 255
 
     multicast_server = socket.socket(
         socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP
