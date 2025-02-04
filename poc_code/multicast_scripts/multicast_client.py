@@ -5,7 +5,7 @@ import struct
 
 
 def main() -> None:
-    mcast_grp = "224.0.0.1"
+    mcast_grp = "239.255.255.250"
     mcast_port = 12345
 
     multicast_client = socket.socket(
