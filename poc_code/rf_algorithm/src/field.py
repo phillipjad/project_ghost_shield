@@ -1,16 +1,18 @@
-from drone import Drone
 import random
-import copy
+
+from drone import Drone
+
 
 class Field:
-    """2 or 3 dimensional field. Used to give space for drone simulation
-    """
-    def __init__(self, x_size: float, y_size: float, z_size: float | None, drones: list[Drone]) -> None:
+    """2 or 3 dimensional field. Used to give space for drone simulation"""
+
+    def __init__(
+        self, x_size: float, y_size: float, z_size: float | None, drones: list[Drone]
+    ) -> None:
         self.x_size = x_size
         self.y_size = y_size
         self.z_size = z_size
         self.drones = drones
-    
 
     def randomly_place_drones(self) -> None:
         for drone in self.drones:
@@ -26,13 +28,14 @@ class Field:
             for other_drone in self.drones:
                 if drone is not other_drone:
                     if prev_distance == drone.calc_distance_between_drones(other_drone):
-                        continue 
+                        continue
                     elif prev_distance == -1:
                         prev_distance = drone.calc_distance_between_drones(other_drone)
-                        continue 
+                        continue
                     else:
                         drones_equidistant = False
                         break
+            break
         return drones_equidistant
 
     def space_drones(self) -> None:
@@ -40,9 +43,6 @@ class Field:
             for other_drone in self.drones:
                 if drone is not other_drone:
                     pass
-            
-            
-
 
     def __str__(self) -> str:
         return f"""

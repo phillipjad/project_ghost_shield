@@ -16,7 +16,7 @@ def main() -> None:
     mreq = struct.pack("4s4s", socket.inet_aton(mcast_grp), socket.inet_aton(mcast_grp))
     multicast_client.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
     multicast_client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    
+
     while True:
         try:
             print("RECEIVING")

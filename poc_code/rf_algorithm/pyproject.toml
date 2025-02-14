@@ -25,3 +25,7 @@ select = [
     "ASYNC",
     "C4",
 ]
+
+ignore= [
+    "E501" # Line too long. Let ruff format handle
+]
