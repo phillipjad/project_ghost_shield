@@ -1,6 +1,7 @@
 import random
 
 from drone import Drone
+from utils.graph_wrapper import DroneGraph
 
 
 class Field:
@@ -38,11 +39,11 @@ class Field:
             break
         return drones_equidistant
 
-    def space_drones(self) -> None:
+    def space_drones(self, drone_graph: DroneGraph) -> None:
         for drone in self.drones:
             for other_drone in self.drones:
                 if drone is not other_drone:
-                    pass
+                    pass #TODO
 
     def __str__(self) -> str:
         return f"""

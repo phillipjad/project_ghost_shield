@@ -20,6 +20,9 @@ class Drone:
 
     def move_z(self, distance: float) -> None:
         self.z += distance
+    
+    def move_from_vector(self, vector: tuple[float, float, float]):
+        pass
 
     def get_x(self) -> float:
         return self.x
@@ -39,6 +42,9 @@ class Drone:
             + math.pow((other.get_y() - self.get_y()), 2)
             + math.pow(other.get_z() - self.get_z(), 2),
         )
+
+    def pretty_print(self) -> str:
+        return f"Drone {self.id}"
 
     def __str__(self) -> str:
         return f"""
