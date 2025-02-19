@@ -13,7 +13,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "poc_code/multicast_scripts/README.md",
+                "file": "poc_code/rf_algorithm/README.md",
                 "mode": "source",
                 "source": false
               },
@@ -40,7 +40,8 @@
             "state": {
               "type": "file-explorer",
               "state": {
-                "sortOrder": "alphabetical"
+                "sortOrder": "alphabetical",
+                "autoReveal": false
               },
               "icon": "lucide-folder-closed",
               "title": "Files"
@@ -165,8 +166,9 @@
   },
   "active": "541775905bc792cc",
   "lastOpenFiles": [
-    "poc_code/README.md",
     "README.md",
+    "poc_code/README.md",
+    "poc_code/multicast_scripts/README.md",
     "poc_code/rf_algorithm/README.md",
     "dev_docs/Get Started.md",
     "dev_docs/snips/Pasted image 20250124145031.png",
