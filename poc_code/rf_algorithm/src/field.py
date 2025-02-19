@@ -39,7 +39,7 @@ class Field:
             break
         return drones_equidistant
 
-    def space_drones(self, drone_graph: DroneGraph) -> None:
+    def space_drones(self, drone_graph: DroneGraph = None) -> None:
         for drone in self.drones:
             for other_drone in self.drones:
                 if drone is not other_drone:
