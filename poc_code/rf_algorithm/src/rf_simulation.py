@@ -71,8 +71,9 @@ def update_graph_edges() -> None:
                 }
             )
 
-def vector_sum(v1: tuple[float, float, float], v2: tuple[float, float, float]):
-    pass
+
+def vector_sum(v1: tuple[float, float, float], v2: tuple[float, float, float]) -> tuple[float, float, float]:
+    return (v1[0] + v2[0], v1[1] + v2[1], v1[2] + v2[2])
 
 #TODO - Add logic for controller (location, multicast, etc.)
 def main() -> None:
