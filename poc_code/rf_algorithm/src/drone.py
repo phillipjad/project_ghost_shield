@@ -26,20 +26,20 @@ class Drone:
         if len(vector) != 3:
             raise ValueError("Vector must have exactly three components (x, y, z).")
 
+        # checks if there should be no movement at all
+        if vector[0] == 0 and vector[1] == 0 and vector[2] == 0:
+            print("No movement")
+            return
+
         # print the movement vector
         print(
             f"Moving {self.pretty_print()} by x: {vector[0]}, y: {vector[1]}, z: {vector[2]}"
         )
-
-        # checks if there should be no movement at all
-        if vector[0] == 0 and vector[1] == 0 and vector[2] == 0:
-            print("No movement")
-
+        
         # moves the drone in the x, y, and z directions
-        else:
-            self.move_x(vector[0])
-            self.move_y(vector[1])
-            self.move_z(vector[2])
+        self.move_x(vector[0])
+        self.move_y(vector[1])
+        self.move_z(vector[2])
 
     def get_x(self) -> float:
         return self.x
