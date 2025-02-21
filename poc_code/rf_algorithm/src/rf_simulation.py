@@ -44,6 +44,7 @@ def populate_graph() -> None:
                 out_d.get_y() - in_d.get_y(),
                 out_d.get_z() - in_d.get_z(),
                 RWLock(),
+                out_idx,
             )
             SYS_GRAPH.add_edge(
                 out_idx,
@@ -68,7 +69,7 @@ def update_graph_edges() -> None:
                 out_d.get_y() - in_d.get_y(),
                 out_d.get_z() - in_d.get_z(),
             )
-            edge_data.update_vector_with_vector(updated_vector)
+            edge_data.update_vector_with_vector(updated_vector, out_d)
 
 
 def vector_sum(
