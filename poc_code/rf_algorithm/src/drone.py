@@ -21,7 +21,7 @@ class Drone:
     def move_z(self, distance: float) -> None:
         self.z += distance
 
-    def move_from_vector(self, vector: tuple[float, float, float]):
+    def move_from_vector(self, vector: tuple[float, float, float]) -> None:
         pass
 
     def get_x(self) -> float:
