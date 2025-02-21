@@ -1,7 +1,7 @@
 import random
 
 from drone import Drone
-from utils.distance_obj import Distance
+from rf_simulation import mark_drone_moved
 from utils.graph_wrapper import DroneGraph
 import math
 
@@ -74,6 +74,8 @@ class Field:
             if self.z_size:
                 drone_graph.get_node_data(out_id).set_z(max(0, min(self.z_size, new_z)))
             damping += 0.05
+        # Only mark the drone as moved if it has actually moved
+        mark_drone_moved(drone)
 
     def __str__(self) -> str:
         return f"""
