@@ -24,6 +24,15 @@ class Drone:
     def move_from_vector(self, vector: tuple[float, float, float]) -> None:
         pass
 
+    def set_x(self, x: float) -> None:
+        self.x = x
+
+    def set_y(self, y: float) -> None:
+        self.y = y
+    
+    def set_z(self, z: float) -> None:
+        self.z = z
+
     def get_x(self) -> float:
         return self.x
 

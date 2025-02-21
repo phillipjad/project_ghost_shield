@@ -1,3 +1,4 @@
+from time import sleep
 from drone import Drone
 from field import Field
 from utils.distance_obj import Distance
@@ -76,7 +77,7 @@ def update_graph_edges() -> None:
             edge_data.update_vector_with_vector(updated_vector, out_d)
 
 
-def update_graph_edge(node1_id: int, node2_id: int) -> None:
+def update_graph_edge(node1_id: int, node2_id: int, edge_data: Distance) -> None:
     """Update a single edge's payload based on two provided nodes.
     The first id should be the "dominant" node in the transaction.
 
@@ -88,13 +89,19 @@ def update_graph_edge(node1_id: int, node2_id: int) -> None:
 
     drone1 = SYS_GRAPH.get_node_data(node1_id)
     drone2 = SYS_GRAPH.get_node_data(node2_id)
-    edge_data: Distance = SYS_GRAPH.get_edge_data(node1_id, node2_id)
     updated_vector = (
         drone1.get_x() - drone2.get_x(),
         drone1.get_y() - drone2.get_y(),
         drone1.get_z() - drone2.get_z(),
     )
     edge_data.update_vector_with_vector(updated_vector, node1_id)
+
+def update_egress_edges(node_id: int) -> None:
+    global SYS_GRAPH
+
+    edges: list[tuple[int, int, Distance]] = SYS_GRAPH.out_edges(node_id)
+    for edge in edges:
+        update_graph_edge(edge[0], edge[1], edge[2])
 
 
 def vector_sum(
@@ -116,10 +123,11 @@ def main() -> None:
     update_graph_edges()
 
     while not drone_field.drones_are_equidistant():
-        drone_field.space_drones(SYS_GRAPH)
-        update_graph_edges()  # Critical update
+        drone_field.space_drones(SYS_GRAPH, update_egress_edges)
         print("STILL NOT EQUIDISTANT")
         print(SYS_GRAPH)
+        sleep(1)
+        print(drone_field)
 
     print("EQUIDISTANT!")
 

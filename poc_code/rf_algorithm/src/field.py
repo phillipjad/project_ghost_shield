@@ -37,7 +37,7 @@ class Field:
         avg = sum(distances) / len(distances)
         return all(math.isclose(d, avg, rel_tol=0.05) for d in distances)
 
-    def space_drones(self, drone_graph: DroneGraph = None) -> None:
+    def space_drones(self, drone_graph: DroneGraph, update_edge_function: callable) -> None:
         repulsion_strength = 2.0  # how strong the repulsion is
         damping = 0.15  # how much of the force to apply
         min_distance = 1.0  # minimum distance between drones
@@ -51,12 +51,14 @@ class Field:
 
                 edge_data: Distance = drone_graph.get_edge_data(out_id, in_id)
                 distance_vector = edge_data.get_vector()
-                if edge_data.get_last_to_write() != in_id:
+                print("before", edge_data)
+                if edge_data.get_last_to_write() != out_id:
                     distance_vector = (
                         -1 * distance_vector[0],
                         -1 * distance_vector[1],
                         -1 * distance_vector[2],
                     )
+                print("after", edge_data)
 
                 # calculate the Euclidean distance between the two drones
                 distance = max(
@@ -81,6 +83,7 @@ class Field:
                 force_vector[2] += (
                     distance_vector[2] / distance
                 ) * force  # calculate the force for z axis
+            print(force_vector)
             new_x = (
                 drone_graph.get_node_data(out_id).get_x() + force_vector[0] * damping
             )  # calculate the new x coordinate
@@ -95,7 +98,8 @@ class Field:
             drone_graph.get_node_data(out_id).set_y(max(0, min(self.y_size, new_y)))
             if self.z_size:
                 drone_graph.get_node_data(out_id).set_z(max(0, min(self.z_size, new_z)))
-            damping += 0.05
+            damping += 0.5 if damping < 10 else 5
+            update_edge_function(out_id)           
 
     def __str__(self) -> str:
         return f"""
