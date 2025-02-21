@@ -1,8 +1,8 @@
 import random
 
 from drone import Drone
-from utils.graph_wrapper import DroneGraph
 from rf_simulation import mark_drone_moved
+from utils.graph_wrapper import DroneGraph
 
 
 class Field:
