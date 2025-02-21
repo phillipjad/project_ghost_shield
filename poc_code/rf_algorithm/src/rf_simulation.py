@@ -1,5 +1,3 @@
-from time import sleep
-
 from drone import Drone
 from field import Field
 from utils.distance_obj import Distance
@@ -99,20 +97,23 @@ def update_graph_edge(node1_id: int, node2_id: int) -> None:
     edge_data.update_vector_with_vector(updated_vector, node1_id)
 
 
-def vector_sum(v1: tuple[float, float, float], v2: tuple[float, float, float]) -> tuple[float, float, float]:
+def vector_sum(
+    v1: tuple[float, float, float], v2: tuple[float, float, float]
+) -> tuple[float, float, float]:
     return (v1[0] + v2[0], v1[1] + v2[1], v1[2] + v2[2])
+
 
 # TODO - Add logic for controller (location, multicast, etc.)
 
 
 def main() -> None:
     global DRONE_LIST, SYS_GRAPH
-    register_drones() # ex: [Drone(0, 3, 3, 3), Drone(1, 3, -3, -3), Drone(2, -3, 3, -3), Drone(3, -3, -3, 3)]
-    populate_graph() # ex:  
+    register_drones()  # ex: [Drone(0, 3, 3, 3), Drone(1, 3, -3, -3), Drone(2, -3, 3, -3), Drone(3, -3, -3, 3)]
+    populate_graph()  # ex:
 
-    drone_field = Field(10, 10, None, DRONE_LIST) 
-    drone_field.randomly_place_drones() # Randomly place drones in field
-    update_graph_edges() 
+    drone_field = Field(10, 10, None, DRONE_LIST)
+    drone_field.randomly_place_drones()  # Randomly place drones in field
+    update_graph_edges()
 
     while not drone_field.drones_are_equidistant():
         drone_field.space_drones(SYS_GRAPH)
