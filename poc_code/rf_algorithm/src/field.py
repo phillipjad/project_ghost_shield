@@ -2,6 +2,7 @@ import random
 
 from drone import Drone
 from utils.graph_wrapper import DroneGraph
+from rf_simulation import mark_drone_moved
 
 
 class Field:
@@ -43,7 +44,9 @@ class Field:
         for drone in self.drones:
             for other_drone in self.drones:
                 if drone is not other_drone:
-                    pass #TODO
+                    pass  # TODO
+        # Only mark the drone as moved if it has actually moved
+        mark_drone_moved(drone)
 
     def __str__(self) -> str:
         return f"""

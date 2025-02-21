@@ -9,15 +9,20 @@ SYS_GRAPH: DroneGraph = DroneGraph(
     multigraph=False
 )
 DRONE_LIST: list[Drone] = []
+MOVING_DRONES: set[Drone] = set()
+
+
+def mark_drone_moved(drone: Drone) -> None:
+    MOVING_DRONES.add(drone)
+
 
 def register_drones() -> None:
     global DRONE_LIST
     # In the future this method will actually work to grab all drones in system
     # Either through config or multicast ping
     # LOOP CONTROL FLOW
-        # d = grab_drone() / wait_for_ping_respone()
-        # DRONE_LIST.append(d)
-
+    # d = grab_drone() / wait_for_ping_respone()
+    # DRONE_LIST.append(d)
 
     # Equidistant list of drones
     # DRONE_LIST = [
@@ -28,6 +33,7 @@ def register_drones() -> None:
     # ]
 
     DRONE_LIST = [Drone(id, 0, 0, 0) for id in range(4)]
+
 
 def populate_graph() -> None:
     global DRONE_LIST, SYS_GRAPH
@@ -45,17 +51,24 @@ def populate_graph() -> None:
                         out_d.get_y() - in_d.get_y(),
                         out_d.get_z() - in_d.get_z(),
                     )
-                }
+                },
             )
 
 
-#TODO - Add function to only update edges between two specfic nodes
+# TODO - Add function to only update edges between two specfic nodes
 def update_graph_edges() -> None:
     """
     Updates the edges of the graph with the current distance between every Drone.
     """
-    global SYS_GRAPH
+    global SYS_GRAPH, MOVING_DRONES
+
+    # No moving drones, no need to update edges
+    if not MOVING_DRONES:
+        return
+
     for out_idx, out_d in enumerate(SYS_GRAPH.nodes()):
+        if out_d not in MOVING_DRONES:
+            continue
         for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
             if out_d == in_d:
                 continue
@@ -68,13 +81,15 @@ def update_graph_edges() -> None:
                         out_d.get_y() - in_d.get_y(),
                         out_d.get_z() - in_d.get_z(),
                     )
-                }
+                },
             )
+
 
 def vector_sum(v1: tuple[float, float, float], v2: tuple[float, float, float]):
     pass
 
-#TODO - Add logic for controller (location, multicast, etc.)
+
+# TODO - Add logic for controller (location, multicast, etc.)
 def main() -> None:
     global DRONE_LIST, SYS_GRAPH
     register_drones()
