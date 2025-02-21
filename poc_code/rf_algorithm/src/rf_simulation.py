@@ -63,15 +63,9 @@ def update_graph_edges() -> None:
     """
     Updates the edges of the graph with the current distance between every Drone.
     """
-    global SYS_GRAPH, MOVING_DRONES
-
-    # No moving drones, no need to update edges
-    if not MOVING_DRONES:
-        return
+    global SYS_GRAPH
 
     for out_idx, out_d in enumerate(SYS_GRAPH.nodes()):
-        if out_d not in MOVING_DRONES:
-            continue
         for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
             if out_d == in_d:
                 continue
@@ -82,6 +76,27 @@ def update_graph_edges() -> None:
                 out_d.get_z() - in_d.get_z(),
             )
             edge_data.update_vector_with_vector(updated_vector, out_d)
+
+
+def update_graph_edge(node1_id: int, node2_id: int) -> None:
+    """Update a single edge's payload based on two provided nodes.
+    The first id should be the "dominant" node in the transaction.
+
+    Args:
+        node1_id (int): node ID of the first drone.
+        node2_id (int): node ID of the second drone.
+    """
+    global SYS_GRAPH
+
+    drone1 = SYS_GRAPH.get_node_data(node1_id)
+    drone2 = SYS_GRAPH.get_node_data(node2_id)
+    edge_data: Distance = SYS_GRAPH.get_edge_data(node1_id, node2_id)
+    updated_vector = (
+        drone1.get_x() - drone2.get_x(),
+        drone1.get_y() - drone2.get_y(),
+        drone1.get_z() - drone2.get_z(),
+    )
+    edge_data.update_vector_with_vector(updated_vector, node1_id)
 
 
 def vector_sum(
