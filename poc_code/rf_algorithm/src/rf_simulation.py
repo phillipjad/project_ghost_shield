@@ -1,8 +1,10 @@
 from time import sleep
 
-from utils.graph_wrapper import DroneGraph
 from drone import Drone
 from field import Field
+from utils.distance_obj import Distance
+from utils.graph_wrapper import DroneGraph
+from utils.read_write_lock import RWLock
 
 SYS_GRAPH: DroneGraph = DroneGraph(
     # Edges are bi-directional
@@ -10,14 +12,14 @@ SYS_GRAPH: DroneGraph = DroneGraph(
 )
 DRONE_LIST: list[Drone] = []
 
+
 def register_drones() -> None:
     global DRONE_LIST
     # In the future this method will actually work to grab all drones in system
     # Either through config or multicast ping
     # LOOP CONTROL FLOW
-        # d = grab_drone() / wait_for_ping_respone()
-        # DRONE_LIST.append(d)
-
+    # d = grab_drone() / wait_for_ping_respone()
+    # DRONE_LIST.append(d)
 
     # Equidistant list of drones
     # DRONE_LIST = [
@@ -29,6 +31,7 @@ def register_drones() -> None:
 
     DRONE_LIST = [Drone(id, 0, 0, 0) for id in range(4)]
 
+
 def populate_graph() -> None:
     global DRONE_LIST, SYS_GRAPH
     SYS_GRAPH.add_nodes_from(DRONE_LIST)
@@ -36,20 +39,20 @@ def populate_graph() -> None:
         for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
             if out_d == in_d:
                 continue
+            edge_data = Distance(
+                out_d.get_x() - in_d.get_x(),
+                out_d.get_y() - in_d.get_y(),
+                out_d.get_z() - in_d.get_z(),
+                RWLock(),
+            )
             SYS_GRAPH.add_edge(
                 out_idx,
                 in_idx,
-                {
-                    out_idx: (
-                        out_d.get_x() - in_d.get_x(),
-                        out_d.get_y() - in_d.get_y(),
-                        out_d.get_z() - in_d.get_z(),
-                    )
-                }
+                edge_data,
             )
 
 
-#TODO - Add function to only update edges between two specfic nodes
+# TODO - Add function to only update edges between two specfic nodes
 def update_graph_edges() -> None:
     """
     Updates the edges of the graph with the current distance between every Drone.
@@ -59,22 +62,22 @@ def update_graph_edges() -> None:
         for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
             if out_d == in_d:
                 continue
-            SYS_GRAPH.add_edge(
-                out_idx,
-                in_idx,
-                {
-                    out_idx: (
-                        out_d.get_x() - in_d.get_x(),
-                        out_d.get_y() - in_d.get_y(),
-                        out_d.get_z() - in_d.get_z(),
-                    )
-                }
+            edge_data: Distance = SYS_GRAPH.get_edge_data(out_idx, in_idx)
+            updated_vector = (
+                out_d.get_x() - in_d.get_x(),
+                out_d.get_y() - in_d.get_y(),
+                out_d.get_z() - in_d.get_z(),
             )
+            edge_data.update_vector_with_vector(updated_vector)
 
-def vector_sum(v1: tuple[float, float, float], v2: tuple[float, float, float]):
+
+def vector_sum(
+    v1: tuple[float, float, float], v2: tuple[float, float, float]
+) -> tuple[float, float, float]:
     pass
 
-#TODO - Add logic for controller (location, multicast, etc.)
+
+# TODO - Add logic for controller (location, multicast, etc.)
 def main() -> None:
     global DRONE_LIST, SYS_GRAPH
     register_drones()

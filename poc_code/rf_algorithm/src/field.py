@@ -43,7 +43,7 @@ class Field:
         for drone in self.drones:
             for other_drone in self.drones:
                 if drone is not other_drone:
-                    pass #TODO
+                    pass  # TODO
 
     def __str__(self) -> str:
         return f"""
