@@ -2,7 +2,9 @@ from utils.read_write_lock import RWLock
 
 
 class Distance:
-    def __init__(self, x: float, y: float, z: float, mutex: RWLock, last_to_write: int = -1) -> None:
+    def __init__(
+        self, x: float, y: float, z: float, mutex: RWLock, last_to_write: int = -1
+    ) -> None:
         self.vector = (x, y, z)
         self.mutex = mutex
         self.last_to_write = last_to_write
@@ -20,7 +22,9 @@ class Distance:
 
         return vector
 
-    def update_vector_with_coords(self, x: float, y: float, z: float, drone_id: int) -> None:
+    def update_vector_with_coords(
+        self, x: float, y: float, z: float, drone_id: int
+    ) -> None:
         """Thread-safe way to update internal distance vector.
 
         Args:
@@ -33,7 +37,9 @@ class Distance:
         self.last_to_write = drone_id
         self.mutex.release_write()
 
-    def update_vector_with_vector(self, vector: tuple[float, float, float], drone_id: int) -> None:
+    def update_vector_with_vector(
+        self, vector: tuple[float, float, float], drone_id: int
+    ) -> None:
         """Thread-safe way to update internal distance vector.
 
         Args:
