@@ -1,8 +1,8 @@
 from time import sleep
 
-from utils.graph_wrapper import DroneGraph
 from drone import Drone
 from field import Field
+from utils.graph_wrapper import DroneGraph
 
 SYS_GRAPH: DroneGraph = DroneGraph(
     # Edges are bi-directional
@@ -10,14 +10,14 @@ SYS_GRAPH: DroneGraph = DroneGraph(
 )
 DRONE_LIST: list[Drone] = []
 
+
 def register_drones() -> None:
     global DRONE_LIST
     # In the future this method will actually work to grab all drones in system
     # Either through config or multicast ping
     # LOOP CONTROL FLOW
-        # d = grab_drone() / wait_for_ping_respone()
-        # DRONE_LIST.append(d)
-
+    # d = grab_drone() / wait_for_ping_respone()
+    # DRONE_LIST.append(d)
 
     # Equidistant list of drones
     # DRONE_LIST = [
@@ -28,6 +28,7 @@ def register_drones() -> None:
     # ]
 
     DRONE_LIST = [Drone(id, 0, 0, 0) for id in range(4)]
+
 
 def populate_graph() -> None:
     global DRONE_LIST, SYS_GRAPH
@@ -45,11 +46,11 @@ def populate_graph() -> None:
                         out_d.get_y() - in_d.get_y(),
                         out_d.get_z() - in_d.get_z(),
                     )
-                }
+                },
             )
 
 
-#TODO - Add function to only update edges between two specfic nodes
+# TODO - Add function to only update edges between two specfic nodes
 def update_graph_edges() -> None:
     """
     Updates the edges of the graph with the current distance between every Drone.
@@ -68,13 +69,17 @@ def update_graph_edges() -> None:
                         out_d.get_y() - in_d.get_y(),
                         out_d.get_z() - in_d.get_z(),
                     )
-                }
+                },
             )
 
-def vector_sum(v1: tuple[float, float, float], v2: tuple[float, float, float]):
+
+def vector_sum(
+    v1: tuple[float, float, float], v2: tuple[float, float, float]
+) -> tuple[float, float, float]:
     pass
 
-#TODO - Add logic for controller (location, multicast, etc.)
+
+# TODO - Add logic for controller (location, multicast, etc.)
 def main() -> None:
     global DRONE_LIST, SYS_GRAPH
     register_drones()

@@ -20,25 +20,27 @@ class Drone:
 
     def move_z(self, distance: float) -> None:
         self.z += distance
-    
-    def move_from_vector(self, vector: tuple[float, float, float]):
-        #check if vector has exactly 3 components
+
+    def move_from_vector(self, vector: tuple[float, float, float]) -> None:
+        # check if vector has exactly 3 components
         if len(vector) != 3:
             raise ValueError("Vector must have exactly three components (x, y, z).")
-        
-        #print the movement vector
-        print(f"Moving {self.pretty_print()} by x: {vector[0]}, y: {vector[1]}, z: {vector[2]}")
-        
-        #checks if there should be no movement at all
-        if(vector[0] == 0 and vector[1] == 0 and vector[2] == 0):
+
+        # print the movement vector
+        print(
+            f"Moving {self.pretty_print()} by x: {vector[0]}, y: {vector[1]}, z: {vector[2]}"
+        )
+
+        # checks if there should be no movement at all
+        if vector[0] == 0 and vector[1] == 0 and vector[2] == 0:
             print("No movement")
-            
-        #moves the drone in the x, y, and z directions
+
+        # moves the drone in the x, y, and z directions
         else:
             self.move_x(vector[0])
             self.move_y(vector[1])
             self.move_z(vector[2])
-        
+
     def get_x(self) -> float:
         return self.x
 
@@ -71,22 +73,23 @@ class Drone:
 
     def __repr__(self) -> str:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
-    
+
+
 if __name__ == "__main__":
     print("testing move_from_vector() method: ")
-    
+
     # Create two drone instances
     drone1 = Drone("Alpha", 0.0, 0.0, 0.0)
     drone2 = Drone("Beta", 3.0, 4.0, 0.0)
-    
+
     print("printing drone1 and drone2 before moving: ")
     print(drone1)
     print(drone2)
     print()
-    
+
     # Move the first drone
     drone1.move_from_vector((-1.0, -1.0, -2.0))
-    
+
     # Move the second drone
     drone2.move_from_vector((3.0, -6.0, 2.0))
 
