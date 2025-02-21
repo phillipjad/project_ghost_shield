@@ -1,8 +1,10 @@
 from time import sleep
 
-from utils.graph_wrapper import DroneGraph
 from drone import Drone
 from field import Field
+from utils.distance_obj import Distance
+from utils.graph_wrapper import DroneGraph
+from utils.read_write_lock import RWLock
 
 SYS_GRAPH: DroneGraph = DroneGraph(
     # Edges are bi-directional
@@ -37,16 +39,17 @@ def populate_graph() -> None:
         for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
             if out_d == in_d:
                 continue
+            edge_data = Distance(
+                out_d.get_x() - in_d.get_x(),
+                out_d.get_y() - in_d.get_y(),
+                out_d.get_z() - in_d.get_z(),
+                RWLock(),
+                out_idx,
+            )
             SYS_GRAPH.add_edge(
                 out_idx,
                 in_idx,
-                {
-                    out_idx: (
-                        out_d.get_x() - in_d.get_x(),
-                        out_d.get_y() - in_d.get_y(),
-                        out_d.get_z() - in_d.get_z(),
-                    )
-                }
+                edge_data,
             )
 
 
@@ -60,17 +63,14 @@ def update_graph_edges() -> None:
         for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
             if out_d == in_d:
                 continue
-            SYS_GRAPH.add_edge(
-                out_idx,
-                in_idx,
-                {
-                    out_idx: (
-                        out_d.get_x() - in_d.get_x(),
-                        out_d.get_y() - in_d.get_y(),
-                        out_d.get_z() - in_d.get_z(),
-                    )
-                }
+            edge_data: Distance = SYS_GRAPH.get_edge_data(out_idx, in_idx)
+            updated_vector = (
+                out_d.get_x() - in_d.get_x(),
+                out_d.get_y() - in_d.get_y(),
+                out_d.get_z() - in_d.get_z(),
             )
+            edge_data.update_vector_with_vector(updated_vector, out_d)
+
 
 
 def vector_sum(v1: tuple[float, float, float], v2: tuple[float, float, float]) -> tuple[float, float, float]:
