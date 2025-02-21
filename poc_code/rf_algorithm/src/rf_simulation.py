@@ -89,11 +89,10 @@ def main() -> None:
     update_graph_edges() 
 
     while not drone_field.drones_are_equidistant():
-        drone_field.space_drones()
+        drone_field.space_drones(SYS_GRAPH)
         update_graph_edges()  # Critical update
         print("STILL NOT EQUIDISTANT")
         print(SYS_GRAPH)
-        sleep(0.5)  # Reduced sleep time
 
     print("EQUIDISTANT!")
 
