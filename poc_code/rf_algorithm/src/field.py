@@ -24,18 +24,13 @@ class Field:
             if self.z_size:
                 drone.move_z(random.randint(0, int(self.z_size - 1)))
 
-    def drones_are_equidistant(self) -> bool:
-        distances = []
-        drones = self.drones
-        for i in range(len(drones)):
-            for j in range(i + 1, len(drones)):
-                distances.append(drones[i].calc_distance_between_drones(drones[j]))
+    def drones_are_equidistant(self, drone_graph: DroneGraph, controller_location: tuple[float, float, float]) -> bool:
+        distances: list[Distance] = []
+        for i in drone_graph.edges():
+            distance = Distance.distance_between_vectors(controller_location, i.get_vector_abs())
+            distances.append(distance)
 
-        if not distances:
-            return True
-
-        avg = sum(distances) / len(distances)
-        return all(math.isclose(d, avg, rel_tol=0.05) for d in distances)
+        return distances.count(distances[0]) == len(distances)
 
     def space_drones(self, drone_graph: DroneGraph, update_edge_function: callable) -> None:
         repulsion_strength = 2.0  # how strong the repulsion is
@@ -51,14 +46,12 @@ class Field:
 
                 edge_data: Distance = drone_graph.get_edge_data(out_id, in_id)
                 distance_vector = edge_data.get_vector()
-                print("before", edge_data)
                 if edge_data.get_last_to_write() != out_id:
                     distance_vector = (
                         -1 * distance_vector[0],
                         -1 * distance_vector[1],
                         -1 * distance_vector[2],
                     )
-                print("after", edge_data)
 
                 # calculate the Euclidean distance between the two drones
                 distance = max(
@@ -83,7 +76,6 @@ class Field:
                 force_vector[2] += (
                     distance_vector[2] / distance
                 ) * force  # calculate the force for z axis
-            print(force_vector)
             new_x = (
                 drone_graph.get_node_data(out_id).get_x() + force_vector[0] * damping
             )  # calculate the new x coordinate

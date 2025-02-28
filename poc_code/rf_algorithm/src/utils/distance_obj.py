@@ -1,3 +1,4 @@
+import math
 from utils.read_write_lock import RWLock
 
 
@@ -21,6 +22,30 @@ class Distance:
         self.mutex.release_read()
 
         return vector
+    
+    def get_vector_abs(self) -> tuple[float, float, float]:
+        """_summary_
+
+        Returns:
+            tuple[float, float, float]: _description_
+        """
+        self.mutex.acquire_read()
+        tmp_vec = self.vector
+        vector_abs = (abs(tmp_vec[0]), abs(tmp_vec[1]), abs(tmp_vec[2]))
+        self.mutex.release_read()
+
+        return vector_abs
+
+    def get_vector_magnitutde(self) -> float:
+        """_summary_
+
+        Returns:
+            float: _description_
+        """
+        self.mutex.acquire_read()
+        vector = self.vector
+        self.mutex.release_read()
+        return math.sqrt((vector[0] ** 2) + (vector[1] ** 2) + (vector[2] ** 2))
 
     def update_vector_with_coords(
         self, x: float, y: float, z: float, drone_id: int
@@ -70,6 +95,23 @@ class Distance:
         self.mutex.release_read()
 
         return drone_id
+
+    @staticmethod
+    def distance_between_vectors(vec_1: tuple[float, float, float], vec_2: tuple[float, float, float]) -> float | int:
+        """_summary_
+
+        Args:
+            vec_1 (tuple[float, float, float]): _description_
+            vec_2 (tuple[float, float, float]): _description_
+
+        Returns:
+            float | int: _description_
+        """
+        return math.sqrt(
+            math.pow(vec_2[0] - vec_1[0], 2)
+            + math.pow(vec_2[1] - vec_1[1], 2)
+            + math.pow(vec_2[2] - vec_1[2], 2),
+        )
 
     def __str__(self) -> str:
         self.mutex.acquire_read()

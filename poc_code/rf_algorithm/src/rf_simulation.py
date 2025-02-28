@@ -1,6 +1,7 @@
 from time import sleep
 from drone import Drone
 from field import Field
+from controller import Controller
 from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
@@ -11,10 +12,18 @@ SYS_GRAPH: DroneGraph = DroneGraph(
 )
 DRONE_LIST: list[Drone] = []
 MOVING_DRONES: set[Drone] = set()
+CONTROLLER: Controller = None
 
 
 def mark_drone_moved(drone: Drone) -> None:
     MOVING_DRONES.add(drone)
+
+def register_controller() -> None:
+    global CONTROLLER
+    """_summary_
+    """
+    if CONTROLLER is None:
+        CONTROLLER = Controller(5, 5, 0)
 
 
 def register_drones() -> None:
@@ -115,6 +124,7 @@ def vector_sum(
 
 def main() -> None:
     global DRONE_LIST, SYS_GRAPH
+    register_controller()
     register_drones()  # ex: [Drone(0, 3, 3, 3), Drone(1, 3, -3, -3), Drone(2, -3, 3, -3), Drone(3, -3, -3, 3)]
     populate_graph()  # ex:
 
@@ -122,12 +132,10 @@ def main() -> None:
     drone_field.randomly_place_drones()  # Randomly place drones in field
     update_graph_edges()
 
-    while not drone_field.drones_are_equidistant():
+    while not drone_field.drones_are_equidistant(SYS_GRAPH, CONTROLLER.get_location()):
         drone_field.space_drones(SYS_GRAPH, update_egress_edges)
         print("STILL NOT EQUIDISTANT")
         print(SYS_GRAPH)
-        sleep(1)
-        print(drone_field)
 
     print("EQUIDISTANT!")
 
