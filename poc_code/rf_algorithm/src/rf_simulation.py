@@ -1,4 +1,3 @@
-from time import sleep
 from drone import Drone
 from field import Field
 from controller import Controller
@@ -20,10 +19,11 @@ def mark_drone_moved(drone: Drone) -> None:
 
 def register_controller() -> None:
     global CONTROLLER
-    """_summary_
+    """Will need to expand later
     """
+    CURR_LOCATION = get_location() if False else (5, 5, 5)
     if CONTROLLER is None:
-        CONTROLLER = Controller(5, 5, 0)
+        CONTROLLER = Controller(CURR_LOCATION)
 
 
 def register_drones() -> None:
@@ -128,7 +128,7 @@ def main() -> None:
     register_drones()  # ex: [Drone(0, 3, 3, 3), Drone(1, 3, -3, -3), Drone(2, -3, 3, -3), Drone(3, -3, -3, 3)]
     populate_graph()  # ex:
 
-    drone_field = Field(10, 10, None, DRONE_LIST)
+    drone_field = Field(10, 10, 10, DRONE_LIST)
     drone_field.randomly_place_drones()  # Randomly place drones in field
     update_graph_edges()
 

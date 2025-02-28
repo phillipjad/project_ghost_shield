@@ -24,10 +24,11 @@ class Distance:
         return vector
     
     def get_vector_abs(self) -> tuple[float, float, float]:
-        """_summary_
+        """Thread-safe way to acquire internal distance vector with absolute value applied.
 
         Returns:
-            tuple[float, float, float]: _description_
+            tuple[float, float, float]: Internal vector representing absolute distance between
+            two nodes in the system.
         """
         self.mutex.acquire_read()
         tmp_vec = self.vector
@@ -37,10 +38,10 @@ class Distance:
         return vector_abs
 
     def get_vector_magnitutde(self) -> float:
-        """_summary_
+        """Thread-safe way to calculate magnitude of internal vector.
 
         Returns:
-            float: _description_
+            float: Magnitude of internal vector.
         """
         self.mutex.acquire_read()
         vector = self.vector
@@ -98,14 +99,14 @@ class Distance:
 
     @staticmethod
     def distance_between_vectors(vec_1: tuple[float, float, float], vec_2: tuple[float, float, float]) -> float | int:
-        """_summary_
+        """Calculates the distance between two position vectors.
 
         Args:
-            vec_1 (tuple[float, float, float]): _description_
-            vec_2 (tuple[float, float, float]): _description_
+            vec_1 (tuple[float, float, float]): First position vector in the form tuple[x, y, z].
+            vec_2 (tuple[float, float, float]): Second position vector in the form tuple[x, y, z].
 
         Returns:
-            float | int: _description_
+            float | int: Distance between the points represented by the two position vectors.
         """
         return math.sqrt(
             math.pow(vec_2[0] - vec_1[0], 2)
