@@ -41,6 +41,15 @@ class Drone:
         self.move_y(vector[1])
         self.move_z(vector[2])
 
+    def set_x(self, x: float) -> None:
+        self.x = x
+
+    def set_y(self, y: float) -> None:
+        self.y = y
+    
+    def set_z(self, z: float) -> None:
+        self.z = z
+
     def get_x(self) -> float:
         return self.x
 
@@ -53,12 +62,6 @@ class Drone:
     def get_id(self) -> str:
         return self.id
 
-    def calc_distance_between_drones(self, other: "Drone") -> int | float:
-        return math.sqrt(
-            math.pow((other.get_x() - self.get_x()), 2)
-            + math.pow((other.get_y() - self.get_y()), 2)
-            + math.pow(other.get_z() - self.get_z(), 2),
-        )
 
     def pretty_print(self) -> str:
         return f"Drone {self.id}"
