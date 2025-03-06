@@ -1,6 +1,7 @@
 from drone import Drone
 from field import Field
 from controller import Controller
+from utils.vector import Vector
 from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
@@ -23,7 +24,7 @@ def register_controller() -> None:
     """
     CURR_LOCATION = get_location() if False else (5, 5, 5)
     if CONTROLLER is None:
-        CONTROLLER = Controller(CURR_LOCATION)
+        CONTROLLER = Controller(*CURR_LOCATION)
 
 
 def register_drones() -> None:
@@ -78,7 +79,7 @@ def update_graph_edges() -> None:
             if out_d == in_d:
                 continue
             edge_data: Distance = SYS_GRAPH.get_edge_data(out_idx, in_idx)
-            updated_vector = (
+            updated_vector: Vector = Vector(
                 out_d.get_x() - in_d.get_x(),
                 out_d.get_y() - in_d.get_y(),
                 out_d.get_z() - in_d.get_z(),
@@ -98,7 +99,7 @@ def update_graph_edge(node1_id: int, node2_id: int, edge_data: Distance) -> None
 
     drone1 = SYS_GRAPH.get_node_data(node1_id)
     drone2 = SYS_GRAPH.get_node_data(node2_id)
-    updated_vector = (
+    updated_vector = Vector(
         drone1.get_x() - drone2.get_x(),
         drone1.get_y() - drone2.get_y(),
         drone1.get_z() - drone2.get_z(),
@@ -111,12 +112,6 @@ def update_egress_edges(node_id: int) -> None:
     edges: list[tuple[int, int, Distance]] = SYS_GRAPH.out_edges(node_id)
     for edge in edges:
         update_graph_edge(edge[0], edge[1], edge[2])
-
-
-def vector_sum(
-    v1: tuple[float, float, float], v2: tuple[float, float, float]
-) -> tuple[float, float, float]:
-    return (v1[0] + v2[0], v1[1] + v2[1], v1[2] + v2[2])
 
 
 # TODO - Add logic for controller (location, multicast, etc.)

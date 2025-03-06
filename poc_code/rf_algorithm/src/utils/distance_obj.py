@@ -1,38 +1,39 @@
-import math
-from utils.read_write_lock import RWLock
+from copy import copy
+
+from .vector import Vector
+from .read_write_lock import RWLock
 
 
 class Distance:
     def __init__(
         self, x: float, y: float, z: float, mutex: RWLock, last_to_write: int = -1
     ) -> None:
-        self.vector = (x, y, z)
+        self.vector = Vector(x, y, z)
         self.mutex = mutex
         self.last_to_write = last_to_write
 
-    def get_vector(self) -> tuple[float, float, float]:
-        """Thread-safe way to acquire internal distance vector.
+    def get_vector(self) -> Vector:
+        """Thread-safe way to acquire a copy of the internal distance vector.
 
         Returns:
-            tuple[float, float, float]: Internal vector representing distance between
+            Vector: Internal vector representing distance between
             two nodes in the system.
         """
         self.mutex.acquire_read()
-        vector = self.vector
+        vector = copy(self.vector)
         self.mutex.release_read()
 
         return vector
     
-    def get_vector_abs(self) -> tuple[float, float, float]:
+    def get_vector_abs(self) -> Vector:
         """Thread-safe way to acquire internal distance vector with absolute value applied.
 
         Returns:
-            tuple[float, float, float]: Internal vector representing absolute distance between
+            Vector: Internal vector representing absolute distance between
             two nodes in the system.
         """
         self.mutex.acquire_read()
-        tmp_vec = self.vector
-        vector_abs = (abs(tmp_vec[0]), abs(tmp_vec[1]), abs(tmp_vec[2]))
+        vector_abs = self.vector.as_abs()
         self.mutex.release_read()
 
         return vector_abs
@@ -44,9 +45,9 @@ class Distance:
             float: Magnitude of internal vector.
         """
         self.mutex.acquire_read()
-        vector = self.vector
+        vector_magnitude = self.vector.get_magnitude()
         self.mutex.release_read()
-        return math.sqrt((vector[0] ** 2) + (vector[1] ** 2) + (vector[2] ** 2))
+        return vector_magnitude
 
     def update_vector_with_coords(
         self, x: float, y: float, z: float, drone_id: int
@@ -59,21 +60,21 @@ class Distance:
             z (float): New z coordinate.
         """
         self.mutex.acquire_write()
-        self.vector = (x, y, z)
+        self.vector._update_vector(x=x, y=y, z=z)
         self.last_to_write = drone_id
         self.mutex.release_write()
 
     def update_vector_with_vector(
-        self, vector: tuple[float, float, float], drone_id: int
+        self, vector: Vector, drone_id: int
     ) -> None:
         """Thread-safe way to update internal distance vector.
 
         Args:
-            vector (tuple[float, float, float]): New vector to update internal instance variable
+            vector Vector: New vector to update internal instance variable
             with.
         """
         self.mutex.acquire_write()
-        self.vector = vector
+        self.vector._replace_internals_with_vector(vector)
         self.last_to_write = drone_id
         self.mutex.release_write()
 
@@ -97,26 +98,39 @@ class Distance:
 
         return drone_id
 
-    @staticmethod
-    def distance_between_vectors(vec_1: tuple[float, float, float], vec_2: tuple[float, float, float]) -> float | int:
-        """Calculates the distance between two position vectors.
+    def distance_between_vectors(self, other_vector: Vector) -> float:
+        """Calculates the distance between the calling vector and another vector.
 
         Args:
-            vec_1 (tuple[float, float, float]): First position vector in the form tuple[x, y, z].
-            vec_2 (tuple[float, float, float]): Second position vector in the form tuple[x, y, z].
+            other_vector (Vector): Other distance vector to use in distance measurement.
 
         Returns:
-            float | int: Distance between the points represented by the two position vectors.
+            float: Distance between the points represented by the two position vectors.
         """
-        return math.sqrt(
-            math.pow(vec_2[0] - vec_1[0], 2)
-            + math.pow(vec_2[1] - vec_1[1], 2)
-            + math.pow(vec_2[2] - vec_1[2], 2),
-        )
+        self.mutex.acquire_read()
+        distance = self.vector.distance_between_vector(other_vector)
+        self.mutex.release_read()
+
+        return distance
+    
+    def distance_between_vectors_using_abs(self, other_vector: Vector) -> float:
+        """Calculates the distance between the absolute value representation of the calling vector and another vector
+
+        Args:
+            other_vector (Vector): Other distance vector to use in distance measurement.
+
+        Returns:
+            float: Distance between the points represented by the two position vectors.
+        """
+        self.mutex.acquire_read()
+        distance = self.vector.as_abs().distance_between_vector(other_vector)
+        self.mutex.release_read()
+
+        return distance
 
     def __str__(self) -> str:
         self.mutex.acquire_read()
-        vector = self.vector
+        vector_internals = self.vector.get_internals_as_tuple()
         self.mutex.release_read()
 
-        return f"<{vector[0]}, {vector[1]}, {vector[2]}>"
+        return f"<{vector_internals[0]}, {vector_internals[1]}, {vector_internals[2]}>"
