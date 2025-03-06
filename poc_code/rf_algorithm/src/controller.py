@@ -1,3 +1,5 @@
+from copy import copy
+
 from utils.vector import Vector
 
 class Controller:
@@ -5,4 +7,4 @@ class Controller:
         self.location = Vector(x, y, z)
 
     def get_location(self) -> Vector:
-        return self.location
+        return copy(self.location)
