@@ -1,4 +1,5 @@
 import time
+
 from controller import Controller
 from drone import Drone
 from field import Field
@@ -9,8 +10,7 @@ from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
 from utils.vector import Vector
 
-
-# CONSTANTS 
+# CONSTANTS
 SYS_GRAPH: DroneGraph = DroneGraph(
     # Edges are bi-directional
     multigraph=False
@@ -20,7 +20,9 @@ MOVING_DRONES: set[Drone] = set()
 CONTROLLER: Controller = None
 
 # System Config
-(MULTICAST_CONFIG, CONTROLLER_CONFIG, DRONES_CONFIG, SENSORS_CONFIG, SYSTEM_CONFIG) = load_system_config(SYSTEM_CONFIG_PATH)
+(MULTICAST_CONFIG, CONTROLLER_CONFIG, DRONES_CONFIG, SENSORS_CONFIG, SYSTEM_CONFIG) = (
+    load_system_config(SYSTEM_CONFIG_PATH)
+)
 
 GET_LOCATION: callable = None
 NUM_EXPECTED_DRONES = DRONES_CONFIG["num_drones"]
@@ -60,7 +62,10 @@ def register_drones() -> None:
     CONTROLLER.send_registration_message()
     timeout = time.time() + REGISTRATION_TIMEOUT
     # Wait for drones to register
-    while (CONTROLLER.get_num_registered_drones() < NUM_EXPECTED_DRONES and time.time() <= timeout):
+    while (
+        CONTROLLER.get_num_registered_drones() < NUM_EXPECTED_DRONES
+        and time.time() <= timeout
+    ):
         time.sleep(0)
 
 
