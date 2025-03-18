@@ -3,6 +3,9 @@ from time import sleep
 from utils.graph_wrapper import DroneGraph
 from drone import Drone
 from field import Field
+from multicast_scripts.multicast_server import MulticastServer
+from multicast_scripts.multicast_client import MulticastClient
+
 
 SYS_GRAPH: DroneGraph = DroneGraph(
     # Edges are bi-directional
