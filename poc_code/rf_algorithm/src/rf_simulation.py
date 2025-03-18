@@ -1,9 +1,10 @@
+from controller import Controller
 from drone import Drone
 from field import Field
-from controller import Controller
 from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
+from utils.vector import Vector
 
 SYS_GRAPH: DroneGraph = DroneGraph(
     # Edges are bi-directional
@@ -12,18 +13,21 @@ SYS_GRAPH: DroneGraph = DroneGraph(
 DRONE_LIST: list[Drone] = []
 MOVING_DRONES: set[Drone] = set()
 CONTROLLER: Controller = None
+# TODO
+GET_LOCATION: callable = None
 
 
 def mark_drone_moved(drone: Drone) -> None:
     MOVING_DRONES.add(drone)
 
+
 def register_controller() -> None:
     global CONTROLLER
     """Will need to expand later
     """
-    CURR_LOCATION = get_location() if False else (5, 5, 5)
+    curr_location = GET_LOCATION if False else (5, 5, 5)
     if CONTROLLER is None:
-        CONTROLLER = Controller(CURR_LOCATION)
+        CONTROLLER = Controller(*curr_location)
 
 
 def register_drones() -> None:
@@ -78,7 +82,7 @@ def update_graph_edges() -> None:
             if out_d == in_d:
                 continue
             edge_data: Distance = SYS_GRAPH.get_edge_data(out_idx, in_idx)
-            updated_vector = (
+            updated_vector: Vector = Vector(
                 out_d.get_x() - in_d.get_x(),
                 out_d.get_y() - in_d.get_y(),
                 out_d.get_z() - in_d.get_z(),
@@ -98,12 +102,13 @@ def update_graph_edge(node1_id: int, node2_id: int, edge_data: Distance) -> None
 
     drone1 = SYS_GRAPH.get_node_data(node1_id)
     drone2 = SYS_GRAPH.get_node_data(node2_id)
-    updated_vector = (
+    updated_vector = Vector(
         drone1.get_x() - drone2.get_x(),
         drone1.get_y() - drone2.get_y(),
         drone1.get_z() - drone2.get_z(),
     )
     edge_data.update_vector_with_vector(updated_vector, node1_id)
+
 
 def update_egress_edges(node_id: int) -> None:
     global SYS_GRAPH
@@ -113,12 +118,6 @@ def update_egress_edges(node_id: int) -> None:
         update_graph_edge(edge[0], edge[1], edge[2])
 
 
-def vector_sum(
-    v1: tuple[float, float, float], v2: tuple[float, float, float]
-) -> tuple[float, float, float]:
-    return (v1[0] + v2[0], v1[1] + v2[1], v1[2] + v2[2])
-
-
 # TODO - Add logic for controller (location, multicast, etc.)
 
 
@@ -126,7 +125,7 @@ def main() -> None:
     global DRONE_LIST, SYS_GRAPH
     register_controller()
     register_drones()  # ex: [Drone(0, 3, 3, 3), Drone(1, 3, -3, -3), Drone(2, -3, 3, -3), Drone(3, -3, -3, 3)]
-    populate_graph()  # ex:
+    populate_graph()
 
     drone_field = Field(10, 10, 10, DRONE_LIST)
     drone_field.randomly_place_drones()  # Randomly place drones in field
