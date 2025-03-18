@@ -1,11 +1,16 @@
+import time
 from controller import Controller
 from drone import Drone
 from field import Field
+from helpers.io_helpers import load_system_config
+from helpers.path_constants import SYSTEM_CONFIG_PATH
 from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
 from utils.vector import Vector
 
+
+# CONSTANTS 
 SYS_GRAPH: DroneGraph = DroneGraph(
     # Edges are bi-directional
     multigraph=False
@@ -13,8 +18,13 @@ SYS_GRAPH: DroneGraph = DroneGraph(
 DRONE_LIST: list[Drone] = []
 MOVING_DRONES: set[Drone] = set()
 CONTROLLER: Controller = None
-# TODO
+
+# System Config
+(MULTICAST_CONFIG, CONTROLLER_CONFIG, DRONES_CONFIG, SENSORS_CONFIG, SYSTEM_CONFIG) = load_system_config(SYSTEM_CONFIG_PATH)
+
 GET_LOCATION: callable = None
+NUM_EXPECTED_DRONES = DRONES_CONFIG["num_drones"]
+REGISTRATION_TIMEOUT = SYSTEM_CONFIG["timeout"]
 
 
 def mark_drone_moved(drone: Drone) -> None:
@@ -46,7 +56,12 @@ def register_drones() -> None:
     #     Drone(3, -3, -3, 3)
     # ]
 
-    DRONE_LIST = [Drone(id, 0, 0, 0) for id in range(4)]
+    # DRONE_LIST = [Drone(id, 0, 0, 0) for id in range(4)]
+    CONTROLLER.send_registration_message()
+    timeout = time.time() + REGISTRATION_TIMEOUT
+    # Wait for drones to register
+    while (CONTROLLER.get_num_registered_drones() < NUM_EXPECTED_DRONES and time.time() <= timeout):
+        time.sleep(0)
 
 
 def populate_graph() -> None:
