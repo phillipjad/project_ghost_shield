@@ -1,7 +1,7 @@
 from copy import copy
 
-from .vector import Vector
 from .read_write_lock import RWLock
+from .vector import Vector
 
 
 class Distance:
@@ -24,7 +24,7 @@ class Distance:
         self.mutex.release_read()
 
         return vector
-    
+
     def get_vector_abs(self) -> Vector:
         """Thread-safe way to acquire internal distance vector with absolute value applied.
 
@@ -64,9 +64,7 @@ class Distance:
         self.last_to_write = drone_id
         self.mutex.release_write()
 
-    def update_vector_with_vector(
-        self, vector: Vector, drone_id: int
-    ) -> None:
+    def update_vector_with_vector(self, vector: Vector, drone_id: int) -> None:
         """Thread-safe way to update internal distance vector.
 
         Args:
@@ -112,7 +110,7 @@ class Distance:
         self.mutex.release_read()
 
         return distance
-    
+
     def distance_between_vectors_using_abs(self, other_vector: Vector) -> float:
         """Calculates the distance between the absolute value representation of the calling vector and another vector
 

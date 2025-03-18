@@ -3,7 +3,8 @@ import math
 
 class Vector:
     """Class representing distance vectors."""
-    def __init__(self, x: float, y: float, z: float):
+
+    def __init__(self, x: float, y: float, z: float) -> None:
         self.x = x
         self.y = y
         self.z = z
@@ -30,11 +31,7 @@ class Vector:
         Returns:
             float: Magnitude of this vector.
         """
-        return math.sqrt(
-            (self.x ** 2) +
-            (self.y ** 2) + 
-            (self.z ** 2)
-        )
+        return math.sqrt((self.x**2) + (self.y**2) + (self.z**2))
 
     def get_internals_as_tuple(self) -> tuple[float, float, float]:
         """Returns a tuple containing the class x, y, z variables in order.
@@ -44,7 +41,9 @@ class Vector:
         """
         return (self.x, self.y, self.z)
 
-    def _update_vector(self, *, x: float | None = None, y: float | None = None, z: float | None = None) -> None:
+    def _update_vector(
+        self, *, x: float | None = None, y: float | None = None, z: float | None = None
+    ) -> None:
         """Protected method to mutate the internal state of the calling vector.
 
         Args:
@@ -59,7 +58,6 @@ class Vector:
         if z:
             self.z = z
 
-        
     def _replace_internals_with_vector(self, vector: "Vector") -> None:
         """Protected method to mutate the internal state of the calling vector.
 
@@ -81,9 +79,9 @@ class Vector:
             float: The distance between the tip of the calling and provided vector.
         """
         return math.sqrt(
-            math.pow((other_vector.x - self.x), 2) +
-            math.pow((other_vector.y - self.y), 2) +
-            math.pow((other_vector.z - self.z), 2)
+            math.pow((other_vector.x - self.x), 2)
+            + math.pow((other_vector.y - self.y), 2)
+            + math.pow((other_vector.z - self.z), 2)
         )
 
     def vector_sum(self, other_vector: "Vector") -> "Vector":
@@ -96,9 +94,7 @@ class Vector:
             Vector: Resultant of vector sum.
         """
         return Vector(
-            self.x + other_vector.x,
-            self.y + other_vector.y,
-            self.z + other_vector.z
+            self.x + other_vector.x, self.y + other_vector.y, self.z + other_vector.z
         )
 
     def mutating_vector_sum(self, other_vector: "Vector") -> None:
@@ -120,9 +116,11 @@ class Vector:
         """
         return Vector((-1 * self.x), (-1 * self.y), (-1 * self.z))
 
-    def calculate_force(self, min_distance: float, repulsion_strength: float) -> "Vector":
-        """Calculates a force vector based on the calling Vector's internal state, 
-        and a passed repulsion_strength. min_distance parameter ensures that at least 
+    def calculate_force(
+        self, min_distance: float, repulsion_strength: float
+    ) -> "Vector":
+        """Calculates a force vector based on the calling Vector's internal state,
+        and a passed repulsion_strength. min_distance parameter ensures that at least
         a minimal change occurs.
 
         Args:
@@ -137,11 +135,10 @@ class Vector:
 
         # calculate the force between the drones the formula is f = repulsion_strength / distance^2
         # the closer the 2 drones the stronger the force
-        force = (repulsion_strength / math.pow(distance, 2))
+        force = repulsion_strength / math.pow(distance, 2)
 
         return Vector(
             ((inner_components[0] / distance) * force),
             ((inner_components[1] / distance) * force),
             ((inner_components[2] / distance) * force),
-
         )

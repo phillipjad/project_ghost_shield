@@ -34,7 +34,7 @@ class Drone:
         print(
             f"Moving {self.pretty_print()} by x: {vector_components[0]}, y: {vector_components[1]}, z: {vector_components[2]}"
         )
-        
+
         # moves the drone in the x, y, and z directions
         self.move_x(vector_components[0])
         self.move_y(vector_components[1])
@@ -45,7 +45,7 @@ class Drone:
 
     def set_y(self, y: float) -> None:
         self.y = y
-    
+
     def set_z(self, z: float) -> None:
         self.z = z
 
@@ -60,7 +60,6 @@ class Drone:
 
     def get_id(self) -> str:
         return self.id
-
 
     def pretty_print(self) -> str:
         return f"Drone {self.id}"

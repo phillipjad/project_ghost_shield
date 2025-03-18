@@ -1,10 +1,10 @@
+from controller import Controller
 from drone import Drone
 from field import Field
-from controller import Controller
-from utils.vector import Vector
 from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
+from utils.vector import Vector
 
 SYS_GRAPH: DroneGraph = DroneGraph(
     # Edges are bi-directional
@@ -13,18 +13,21 @@ SYS_GRAPH: DroneGraph = DroneGraph(
 DRONE_LIST: list[Drone] = []
 MOVING_DRONES: set[Drone] = set()
 CONTROLLER: Controller = None
+# TODO
+GET_LOCATION: callable = None
 
 
 def mark_drone_moved(drone: Drone) -> None:
     MOVING_DRONES.add(drone)
 
+
 def register_controller() -> None:
     global CONTROLLER
     """Will need to expand later
     """
-    CURR_LOCATION = get_location() if False else (5, 5, 5)
+    curr_location = GET_LOCATION if False else (5, 5, 5)
     if CONTROLLER is None:
-        CONTROLLER = Controller(*CURR_LOCATION)
+        CONTROLLER = Controller(*curr_location)
 
 
 def register_drones() -> None:
@@ -106,6 +109,7 @@ def update_graph_edge(node1_id: int, node2_id: int, edge_data: Distance) -> None
     )
     edge_data.update_vector_with_vector(updated_vector, node1_id)
 
+
 def update_egress_edges(node_id: int) -> None:
     global SYS_GRAPH
 
@@ -121,7 +125,7 @@ def main() -> None:
     global DRONE_LIST, SYS_GRAPH
     register_controller()
     register_drones()  # ex: [Drone(0, 3, 3, 3), Drone(1, 3, -3, -3), Drone(2, -3, 3, -3), Drone(3, -3, -3, 3)]
-    populate_graph()  # ex:
+    populate_graph()
 
     drone_field = Field(10, 10, 10, DRONE_LIST)
     drone_field.randomly_place_drones()  # Randomly place drones in field
