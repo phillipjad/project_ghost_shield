@@ -76,9 +76,11 @@ class Drone:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
 
     # checks if two drones are equal by id, x, y, and z
-    def __eq__(self, other: "Drone") -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Drone):
+            return False  # don't attempt to compare against unrelated types
         if (
-            self.id == other.get_id()
+            self.id == other.id
             and self.x == other.get_x()
             and self.y == other.get_y()
             and self.z == other.get_z()
