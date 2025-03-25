@@ -75,6 +75,17 @@ class Drone:
     def __repr__(self) -> str:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
 
+    # checks if two drones are equal by id, x, y, and z
+    def equals(self, other_drone: "Drone") -> bool:
+        if (
+            self.id == other_drone.get_id()
+            and self.x == other_drone.get_x()
+            and self.y == other_drone.get_y()
+            and self.z == other_drone.get_z()
+        ):
+            return True
+        return False
+
 
 if __name__ == "__main__":
     print("testing move_from_vector() method: ")
