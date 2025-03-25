@@ -76,12 +76,12 @@ class Drone:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
 
     # checks if two drones are equal by id, x, y, and z
-    def equals(self, other_drone: "Drone") -> bool:
+    def __eq__(self, other: "Drone") -> bool:
         if (
-            self.id == other_drone.get_id()
-            and self.x == other_drone.get_x()
-            and self.y == other_drone.get_y()
-            and self.z == other_drone.get_z()
+            self.id == other.get_id()
+            and self.x == other.get_x()
+            and self.y == other.get_y()
+            and self.z == other.get_z()
         ):
             return True
         return False

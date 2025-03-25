@@ -55,7 +55,7 @@ def populate_graph() -> None:
     for out_idx, out_d in enumerate(SYS_GRAPH.nodes()):
         for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
             # skips reverse edges that are already in the graph, added for effciency
-            if out_d.equals(in_d):
+            if out_d == in_d:
                 continue
             edge_data = Distance(
                 out_d.get_x() - in_d.get_x(),
@@ -71,25 +71,6 @@ def populate_graph() -> None:
             )
 
 
-# only updates edges between moving drones, added for effciency
-def update_moving_drones_edges() -> None:
-    global SYS_GRAPH, MOVING_DRONES
-
-    for drone in MOVING_DRONES:
-        if drone not in SYS_GRAPH.nodes():
-            raise ValueError(f"Drone {drone.get_id()} not found in graph")
-        for in_idx, in_d in SYS_GRAPH.nodes():
-            if drone.equals(in_d):
-                continue
-            edge_data = SYS_GRAPH.get_edge_data(drone.get_id, in_idx)
-            updated_vector: Vector = Vector(
-                drone.get_x() - in_d.get_x(),
-                drone.get_y() - in_d.get_y(),
-                drone.get_z() - in_d.get_z(),
-            )
-            edge_data.update_vector_with_vector(updated_vector, drone)
-
-
 def update_graph_edges() -> None:
     """
     Updates the edges of the graph with the current distance between every Drone.
@@ -98,7 +79,7 @@ def update_graph_edges() -> None:
 
     for out_idx, out_d in enumerate(SYS_GRAPH.nodes()):
         for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
-            if out_d.equals(in_d):
+            if out_d == in_d:
                 continue
             edge_data: Distance = SYS_GRAPH.get_edge_data(out_idx, in_idx)
             updated_vector: Vector = Vector(
