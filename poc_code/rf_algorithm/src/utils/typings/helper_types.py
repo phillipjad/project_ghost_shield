@@ -3,7 +3,7 @@ from typing import Literal, TypedDict
 
 class MulticastConfig(TypedDict):
     group: str
-    # Format 
+    # Format "<START_PORT><Delimiting colon><END_PORT>" .e.g. "8000:8080"
     mc_port_range: str
 
 

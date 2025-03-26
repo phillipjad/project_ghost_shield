@@ -1,7 +1,7 @@
 {
     "multicast": {
         "group": "239.255.255.250",
-        "mc_port_range": "8000-8080"
+        "mc_port_range": "8000:8080"
     },
     "controller": {
         "mc_port": 12345
