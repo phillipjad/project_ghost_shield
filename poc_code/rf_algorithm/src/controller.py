@@ -3,7 +3,9 @@ from queue import Queue
 from threading import Thread
 
 from utils.vector import Vector
+from constants.messaging_constants import ctrl_send_reg_msg
 
+CTRL_QUEUE: Queue
 
 class Controller:
     def __init__(self, x: float, y: float, z: float) -> None:
@@ -51,6 +53,7 @@ class Controller:
         Raises:
             NotImplementedError: _description_
         """
+        # This one will put into 
         raise NotImplementedError
 
     def listen(self, msg_queue: Queue) -> None:
@@ -59,11 +62,22 @@ class Controller:
     def send(self, msg_queue: Queue) -> None:
         raise NotImplementedError
 
-def start_controller_thread(x: float, y: float, z: float) -> None:
+    def main_thread_listener(self):
+        # Blocks on .get()
+        while (msg := CTRL_QUEUE.get()) is not None:
+            if msg == ctrl_send_reg_msg:
+                self.send_registration_message()
+            else:
+                continue 
+
+
+def start_controller_thread(x: float, y: float, z: float, controller_queue: Queue) -> None:
     c = Controller(x, y, z)
     q = Queue()
+    CTRL_QUEUE = controller_queue
 
-    listener_thread = Thread(target=c.listen, args=[q])
-    sending_thread = Thread(target=c.send, args=[q])
+    listener_thread = Thread(target=c.listen, args=[q], daemon=True)
+    sending_thread = Thread(target=c.send, args=[q], daemon=True)
     listener_thread.start()
     sending_thread.start()
+    c.main_thread_listener()

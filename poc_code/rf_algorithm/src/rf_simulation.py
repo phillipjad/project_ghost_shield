@@ -1,5 +1,6 @@
 import argparse
 import multiprocessing as mp
+from queue import Queue
 from threading import Thread
 import time
 
@@ -12,6 +13,7 @@ from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
 from utils.vector import Vector
+from constants.messaging_constants import ctrl_send_reg_msg
 
 # CONSTANTS
 SYS_GRAPH: DroneGraph = DroneGraph(
@@ -27,13 +29,13 @@ SYS_GRAPH: DroneGraph = DroneGraph(
 GET_LOCATION: callable = None
 NUM_EXPECTED_DRONES = DRONES_CONFIG["num_drones"]
 REGISTRATION_TIMEOUT = SYSTEM_CONFIG["timeout"]
+CONTROLLER_QUEUE = Queue()
 
 def register_controller() -> None:
-    global CONTROLLER
     """Will need to expand later
     """
-    curr_location = (5, 5, 5)
-    # ctllr_thread = Thread(target=)
+    ctllr_thread = Thread(target=start_controller_thread, args=[CONTROLLER_QUEUE], daemon=True)
+    ctllr_thread.start()
     return True
 
 
@@ -41,15 +43,11 @@ def register_drones() -> None:
     global DRONE_LIST
     # In the future this method will actually work to grab all drones in system
     # Either through config or multicast ping
-    CONTROLLER.send_registration_message()
-    timeout = time.time() + REGISTRATION_TIMEOUT
+    CONTROLLER_QUEUE.put(ctrl_send_reg_msg) 
+
     # Wait for drones to register
-    while (
-        CONTROLLER.get_num_registered_drones() < NUM_EXPECTED_DRONES
-        and time.time() <= timeout
-    ):
-        time.sleep(0)
-    return CONTROLLER.get_num_registered_drones() > 0
+    num_drones_registered = CONTROLLER_QUEUE.get(block=True, timeout=SYSTEM_CONFIG["timeout"])
+    return num_drones_registered
 
 
 def populate_graph() -> None:

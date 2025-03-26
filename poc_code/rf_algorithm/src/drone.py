@@ -95,34 +95,3 @@ def start_drone_process(id: str, x: float, y: float, z: float):
     listener_thread.start()
     sending_thread.start()
         
-
-
-if __name__ == "__main__":
-    print("testing move_from_vector() method: ")
-
-    # Create two drone instances
-    drone1 = Drone("Alpha", 0.0, 0.0, 0.0)
-    drone2 = Drone("Beta", 3.0, 4.0, 0.0)
-
-    print("printing drone1 and drone2 before moving: ")
-    print(drone1)
-    print(drone2)
-    print()
-
-    # Move the first drone
-    drone1.move_from_vector(Vector(-1.0, -1.0, -2.0))
-
-    # Move the second drone
-    drone2.move_from_vector(Vector(3.0, -6.0, 2.0))
-
-    print()
-    print("printing drone1 and drone2 after moving: ")
-    print(drone1)
-    print(drone2)
-    print()
-
-    # Calculate distance between them
-    drone_1_vec = Vector(drone1.get_x(), drone1.get_y(), drone1.get_z())
-    drone_2_vec = Vector(drone2.get_x(), drone2.get_y(), drone2.get_z())
-    distance = drone_1_vec.distance_between_vector(drone_2_vec)
-    print(f"Distance between drones: {distance}")

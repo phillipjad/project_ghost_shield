@@ -3,6 +3,8 @@ from typing import Literal, TypedDict
 
 class MulticastConfig(TypedDict):
     group: str
+    # Format 
+    mc_port_range: str
 
 
 class ControllerConfig(TypedDict):
@@ -11,7 +13,6 @@ class ControllerConfig(TypedDict):
 
 class DronesConfig(TypedDict):
     num_drones: int
-    mc_port: int
 
 
 class SensorsConfig(TypedDict):
@@ -22,6 +23,10 @@ class SensorsConfig(TypedDict):
 class SystemConfig(TypedDict):
     timeout: int
 
+class FieldConfig(TypedDict):
+    x: float
+    y: float
+    z: float
 
 class SysConfig(TypedDict):
     multicast: MulticastConfig
@@ -29,3 +34,4 @@ class SysConfig(TypedDict):
     drones: DronesConfig
     sensors: SensorsConfig
     system: SystemConfig
+    field: FieldConfig
