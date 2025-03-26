@@ -3,6 +3,8 @@ from time import sleep
 from utils.graph_wrapper import DroneGraph
 from drone import Drone
 from field import Field
+from mc_lib.multicast_server import MulticastServer
+from mc_lib.multicast_client import MulticastClient
 
 
 SYS_GRAPH: DroneGraph = DroneGraph(

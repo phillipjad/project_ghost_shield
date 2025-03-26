@@ -9,9 +9,9 @@ authors = [
 requires-python = ">=3.11"
 
 dependencies = [
+    "mclib",
     "ruff~=0.9.3",
     "rustworkx~=0.16.0",
-
 ]
 
 [tool.ruff.lint]
@@ -31,3 +31,7 @@ select = [
 ignore= [
     "E501" # Line too long. Let ruff format handle
 ]
+
+[tool.uv.sources]
+mc-lib = { path = "pl/mc_lib-0.1.0-py3-none-any.whl" }
+mclib = { path = "pl/mclib-0.1.0-py3-none-any.whl" }
