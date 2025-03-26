@@ -1,4 +1,6 @@
 from copy import copy
+from queue import Queue
+from threading import Thread
 
 from utils.vector import Vector
 
@@ -42,3 +44,26 @@ class Controller:
             NotImplementedError: _description_
         """
         raise NotImplementedError
+
+    def receive_registration_message(self) -> None:
+        """Used to receive registration messages.
+
+        Raises:
+            NotImplementedError: _description_
+        """
+        raise NotImplementedError
+
+    def listen(self, msg_queue: Queue) -> None:
+        raise NotImplementedError
+
+    def send(self, msg_queue: Queue) -> None:
+        raise NotImplementedError
+
+def start_controller_thread(x: float, y: float, z: float) -> None:
+    c = Controller(x, y, z)
+    q = Queue()
+
+    listener_thread = Thread(target=c.listen, args=[q])
+    sending_thread = Thread(target=c.send, args=[q])
+    listener_thread.start()
+    sending_thread.start()

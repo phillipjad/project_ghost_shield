@@ -1,13 +1,13 @@
 {
     "multicast": {
-        "group": "239.255.255.250"
+        "group": "239.255.255.250",
+        "mc_port_range": "8000-8080"
     },
     "controller": {
         "mc_port": 12345
     },
     "drones": {
-        "num_drones": 4,
-        "mc_port": 12345
+        "num_drones": 4
     },
     "sensors": {
         "max_range": 10,
@@ -15,5 +15,10 @@
     },
     "system": {
         "timeout": 10
+    },
+    "field": {
+        "x": 10,
+        "y": 10,
+        "z": 10
     }
 }

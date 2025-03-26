@@ -1,3 +1,6 @@
+from threading import Thread, Condition, Lock
+from queue import Queue
+
 from utils.vector import Vector
 
 
@@ -11,6 +14,8 @@ class Drone:
         self.x = x_coordinate
         self.y = y_coordinate
         self.z = z_coordinate
+        self.mcast_send_sock = None  # Depends on backlog item
+        self.mcast_rec_sock = None  # Depends on backlog item
 
     def move_x(self, distance: float) -> None:
         self.x += distance
@@ -61,6 +66,12 @@ class Drone:
     def get_id(self) -> str:
         return self.id
 
+    def listen(self, msg_queue: Queue) -> None:
+        raise NotImplementedError
+
+    def send(self, msg_queue: Queue) -> None:
+        raise NotImplementedError
+
     def pretty_print(self) -> str:
         return f"Drone {self.id}"
 
@@ -74,6 +85,16 @@ class Drone:
 
     def __repr__(self) -> str:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
+
+def start_drone_process(id: str, x: float, y: float, z: float):
+    d = Drone(id, x, y, z)
+    q = Queue()
+
+    listener_thread = Thread(target=d.listen, args=[q])
+    sending_thread = Thread(target=d.send, args=[q])
+    listener_thread.start()
+    sending_thread.start()
+        
 
 
 if __name__ == "__main__":
