@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+src/mc_lib/__init__.py
+src/mc_lib/multicast_client.py
+src/mc_lib/multicast_server.py
+src/mc_lib.egg-info/PKG-INFO
+src/mc_lib.egg-info/SOURCES.txt
+src/mc_lib.egg-info/dependency_links.txt
+src/mc_lib.egg-info/requires.txt
+src/mc_lib.egg-info/top_level.txt
