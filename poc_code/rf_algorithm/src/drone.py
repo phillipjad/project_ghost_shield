@@ -1,3 +1,6 @@
+from threading import Thread, Condition, Lock
+from queue import Queue
+
 from utils.vector import Vector
 
 
@@ -11,6 +14,8 @@ class Drone:
         self.x = x_coordinate
         self.y = y_coordinate
         self.z = z_coordinate
+        self.mcast_send_sock = None  # Depends on backlog item
+        self.mcast_rec_sock = None  # Depends on backlog item
 
     def move_x(self, distance: float) -> None:
         self.x += distance
@@ -61,6 +66,12 @@ class Drone:
     def get_id(self) -> str:
         return self.id
 
+    def listen(self, msg_queue: Queue) -> None:
+        raise NotImplementedError
+
+    def send(self, msg_queue: Queue) -> None:
+        raise NotImplementedError
+
     def pretty_print(self) -> str:
         return f"Drone {self.id}"
 
@@ -75,33 +86,12 @@ class Drone:
     def __repr__(self) -> str:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
 
+def start_drone_process(id: str, x: float, y: float, z: float):
+    d = Drone(id, x, y, z)
+    q = Queue()
 
-if __name__ == "__main__":
-    print("testing move_from_vector() method: ")
-
-    # Create two drone instances
-    drone1 = Drone("Alpha", 0.0, 0.0, 0.0)
-    drone2 = Drone("Beta", 3.0, 4.0, 0.0)
-
-    print("printing drone1 and drone2 before moving: ")
-    print(drone1)
-    print(drone2)
-    print()
-
-    # Move the first drone
-    drone1.move_from_vector(Vector(-1.0, -1.0, -2.0))
-
-    # Move the second drone
-    drone2.move_from_vector(Vector(3.0, -6.0, 2.0))
-
-    print()
-    print("printing drone1 and drone2 after moving: ")
-    print(drone1)
-    print(drone2)
-    print()
-
-    # Calculate distance between them
-    drone_1_vec = Vector(drone1.get_x(), drone1.get_y(), drone1.get_z())
-    drone_2_vec = Vector(drone2.get_x(), drone2.get_y(), drone2.get_z())
-    distance = drone_1_vec.distance_between_vector(drone_2_vec)
-    print(f"Distance between drones: {distance}")
+    listener_thread = Thread(target=d.listen, args=[q])
+    sending_thread = Thread(target=d.send, args=[q])
+    listener_thread.start()
+    sending_thread.start()
+        

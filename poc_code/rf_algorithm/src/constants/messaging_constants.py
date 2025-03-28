@@ -1,0 +1,1 @@
+ctrl_send_reg_msg="C_REG_MSG"

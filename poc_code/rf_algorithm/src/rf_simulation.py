@@ -1,55 +1,53 @@
-from controller import Controller
-from drone import Drone
-from field import Field
-from mc_lib.multicast_server import MulticastServer
-from mc_lib.multicast_client import MulticastClient
+import argparse
+import multiprocessing as mp
+from queue import Queue
+from threading import Thread
+import time
 
+from controller import start_controller_thread
+from drone import start_drone_process
+from field import Field
+from helpers.io_helpers import load_system_config
+from helpers.path_constants import SYSTEM_CONFIG_PATH
 from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
 from utils.vector import Vector
+from constants.messaging_constants import ctrl_send_reg_msg
 
+# CONSTANTS
 SYS_GRAPH: DroneGraph = DroneGraph(
     # Edges are bi-directional
     multigraph=False
 )
-DRONE_LIST: list[Drone] = []
-MOVING_DRONES: set[Drone] = set()
-CONTROLLER: Controller = None
-# TODO
+
+# System Config
+(MULTICAST_CONFIG, CONTROLLER_CONFIG, DRONES_CONFIG, SENSORS_CONFIG, SYSTEM_CONFIG) = (
+    load_system_config(SYSTEM_CONFIG_PATH)
+)
+
 GET_LOCATION: callable = None
-
-
-def mark_drone_moved(drone: Drone) -> None:
-    MOVING_DRONES.add(drone)
-
+NUM_EXPECTED_DRONES = DRONES_CONFIG["num_drones"]
+REGISTRATION_TIMEOUT = SYSTEM_CONFIG["timeout"]
+CONTROLLER_QUEUE = Queue()
 
 def register_controller() -> None:
-    global CONTROLLER
     """Will need to expand later
     """
-    curr_location = GET_LOCATION if False else (5, 5, 5)
-    if CONTROLLER is None:
-        CONTROLLER = Controller(*curr_location)
+    ctllr_thread = Thread(target=start_controller_thread, args=[CONTROLLER_QUEUE], daemon=True)
+    ctllr_thread.start()
+    return True
 
 
 def register_drones() -> None:
     global DRONE_LIST
     # In the future this method will actually work to grab all drones in system
     # Either through config or multicast ping
-    # LOOP CONTROL FLOW
-    # d = grab_drone() / wait_for_ping_respone()
-    # DRONE_LIST.append(d)
+    CONTROLLER_QUEUE.put(ctrl_send_reg_msg) 
 
-    # Equidistant list of drones
-    # DRONE_LIST = [
-    #     Drone(0, 3, 3, 3),
-    #     Drone(1, 3, -3, -3),
-    #     Drone(2, -3, 3, -3),
-    #     Drone(3, -3, -3, 3)
-    # ]
-
-    DRONE_LIST = [Drone(id, 0, 0, 0) for id in range(4)]
+    # Wait for drones to register
+    num_drones_registered = CONTROLLER_QUEUE.get(block=True, timeout=SYSTEM_CONFIG["timeout"])
+    return num_drones_registered
 
 
 def populate_graph() -> None:
@@ -124,10 +122,16 @@ def update_egress_edges(node_id: int) -> None:
 # TODO - Add logic for controller (location, multicast, etc.)
 
 
-def main() -> None:
-    global DRONE_LIST, SYS_GRAPH
-    register_controller()
-    register_drones()  # ex: [Drone(0, 3, 3, 3), Drone(1, 3, -3, -3), Drone(2, -3, 3, -3), Drone(3, -3, -3, 3)]
+def main(debug: bool) -> None:
+    global SYS_GRAPH, NUM_EXPECTED_DRONES
+
+    for i in range(NUM_EXPECTED_DRONES):
+        mp.Process(target=start_drone_process, args=[i, 0, 0, 0]).start() if debug else mp.Process(target=start_drone_process, args=[i, 0, 0, 0]).start()
+
+    if not register_controller():
+        raise RuntimeError("Failed to register controller")
+    if not register_drones():
+        raise RuntimeError("Failed to register drones")
     populate_graph()
 
     drone_field = Field(10, 10, 10, DRONE_LIST)
@@ -143,4 +147,12 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    mp.set_start_method('spawn')
+    parser = argparse.ArgumentParser(
+        prog='Project Ghost Shield - RF Simulation',
+        description='***Proof of Concept Simulation for Project Ghost Shield***'
+    )
+    parser.add_argument('-d', '--debug', action='store_true', help='flag denoting whether to run program in debug mode or in release mode.')
+    args = parser.parse_args()
+    debug = args.debug
+    main(debug)
