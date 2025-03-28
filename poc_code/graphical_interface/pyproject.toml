@@ -1,0 +1,10 @@
+[project]
+name = "graphical-interface"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.2.4",
+    "ursina>=7.0.0",
+]
