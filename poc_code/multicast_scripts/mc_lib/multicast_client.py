@@ -5,7 +5,7 @@ import selectors
 
 
 class MulticastClient:
-    def __init__(self, group="239.255.255.250", port=12345):
+    def __init__(self, group: str = "239.255.255.250", port: int = 12345):
         self.group: str = group
         self.port: int = port
         self.sel: selectors.DefaultSelector = selectors.DefaultSelector()
