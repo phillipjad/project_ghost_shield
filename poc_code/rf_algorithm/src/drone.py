@@ -2,6 +2,8 @@ from threading import Thread, Condition, Lock
 from queue import Queue
 
 from utils.vector import Vector
+from mc_lib.multicast_client import MulticastClient
+from mc_lib.multicast_server import MulticastServer
 
 
 class Drone:
@@ -14,8 +16,8 @@ class Drone:
         self.x = x_coordinate
         self.y = y_coordinate
         self.z = z_coordinate
-        self.mcast_send_sock = None  # Depends on backlog item
-        self.mcast_rec_sock = None  # Depends on backlog item
+        self.mcast_send_sock = MulticastClient(port=50000)  # Depends on backlog item
+        self.mcast_rec_sock = MulticastServer(port=50001)  # Depends on backlog item
 
     def move_x(self, distance: float) -> None:
         self.x += distance

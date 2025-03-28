@@ -1,7 +1,5 @@
 import socket
-import struct
 import selectors
-import time
 import threading
 
 
@@ -16,11 +14,10 @@ class MulticastServer:
         self.sock: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.ttl)
+        self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(self.group))
         self.sock.setblocking(False)
 
-        self.sel.register(self.sock, selectors.EVENT_WRITE, self.send_message)
 
     def send_message(self, msg: bytes):
         with self.lock:
             self.sock.sendto(msg, (self.group, self.port))
-            print(f"[Server] Sent: {msg}")

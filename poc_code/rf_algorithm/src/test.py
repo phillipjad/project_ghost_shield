@@ -5,12 +5,21 @@ from time import sleep
 from mc_lib.multicast_client import MulticastClient
 from mc_lib.multicast_server import MulticastServer
 
-c = MulticastClient(port=50000)
-# s = MulticastServer(port=50001)
 q = Queue()
 
+def start_listen(q: Queue):
+    c = MulticastClient(port=50001)
+    c.listen(q)
+
+def start_send():
+    s = MulticastServer(port=50001)
+    while True:
+        s.send_message("HeLLLow multicast".encode())
+        sleep(1)
+
+
 if __name__ == "__main__":
-    Process(target=c.listen, args=[q], daemon=True).start()
-    # while True:
-    #     s.send_message("HeLLLow multicast".encode())
-    #     sleep(1)
+    Process(target=start_listen, args=[q], daemon=True).start()
+    Process(target=start_send, daemon=True).start()
+    while (item := q.get()):
+        print(item)
