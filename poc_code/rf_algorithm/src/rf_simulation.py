@@ -54,7 +54,6 @@ def populate_graph() -> None:
     SYS_GRAPH.add_nodes_from(DRONE_LIST)
     for out_idx, out_d in enumerate(SYS_GRAPH.nodes()):
         for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
-            # skips reverse edges that are already in the graph, added for effciency
             if out_d == in_d:
                 continue
             edge_data = Distance(
