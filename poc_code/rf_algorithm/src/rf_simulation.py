@@ -70,6 +70,7 @@ def populate_graph() -> None:
             )
 
 
+# TODO - Add function to only update edges between two specfic nodes
 def update_graph_edges() -> None:
     """
     Updates the edges of the graph with the current distance between every Drone.
