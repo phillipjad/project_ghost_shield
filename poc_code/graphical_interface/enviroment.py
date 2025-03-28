@@ -1,7 +1,7 @@
 from ursina import *
 from ursina.prefabs.first_person_controller import FirstPersonController
-import math
 from drone import GUIDrone
+import math
 class Environment:
     def __init__(self, terrain_image, terrain_texture, terrain_scale=(30, 4, 30)):
         self.terrain_image = terrain_image
@@ -110,6 +110,8 @@ class Environment:
             )
 
             drone_entity = drone_creator.create_drone()
+            # Add ID to the drone for reference
+            drone_entity.id = i
             drones.append(drone_entity)
 
         self.drones = drones
@@ -121,6 +123,41 @@ class Environment:
         for drone in self.drones:
             if hasattr(drone, 'physics') and drone.physics:
                 drone.physics.update()
+
+    def move_drone_to(self, drone_id, target_position):
+        """
+        Move a specific drone to the target position with realistic physics
+
+        Parameters:
+        - drone_id: ID of the drone to move
+        - target_position: (x, y, z) coordinate to move to
+
+        Returns:
+        - True if drone was found and command sent, False otherwise
+        """
+        if 0 <= drone_id < len(self.drones):
+            drone = self.drones[drone_id]
+            if hasattr(drone, 'physics') and drone.physics:
+                print(f"Moving drone {drone_id} to {target_position}")
+                drone.physics.move_to(target_position)
+                return True
+        else:
+            print(f"Error: Drone ID {drone_id} not found")
+        return False
+
+    def fly_all_drones_up(self, height=10):
+        """
+        Command all drones to fly up to the specified height
+
+        Parameters:
+        - height: Height to fly up to
+        """
+        for i, drone in enumerate(self.drones):
+            if hasattr(drone, 'physics') and drone.physics:
+                # Move up while keeping x,z position
+                target = (drone.x, drone.y + height, drone.z)
+                drone.physics.move_to(target)
+                print(f"Drone {i} flying up to {target}")
 
 
 # Usage example
@@ -136,12 +173,24 @@ if __name__ == '__main__':
         terrain_scale=(30, 4, 30)
     )
 
-    # Set up the environment (no drones)
+    # Set up the environment
     env.setup()
 
     # Add drones in default circle pattern
     env.make_drones()
-    
+
+    # Display a countdown text
+    countdown_text = Text(
+        text="Drones will take off in 5 seconds", position=(0, 0.4), origin=(0, 0))
+
+    # Schedule drones to fly up after 5 seconds
+    def start_flying():
+        countdown_text.text = "Drones are now flying!"
+        env.fly_all_drones_up(height=10)
+        invoke(lambda: setattr(countdown_text, 'enabled', False), delay=3)
+
+    invoke(start_flying, delay=5)
+
     def update():
         env.update_drones()
 

@@ -1,6 +1,5 @@
 from physics import DronePhysics
-from ursina import *
-
+from ursina import Entity, color
 class GUIDrone:
     def __init__(self, model_path: str, color: str = color.white, starter_position: tuple = (0, 5, 0), scale: float = 0.5):
         self.model_path = model_path
