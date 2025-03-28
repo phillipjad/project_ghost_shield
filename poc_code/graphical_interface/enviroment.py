@@ -1,7 +1,10 @@
 from ursina import *
 from ursina.prefabs.first_person_controller import FirstPersonController
+from ursina.prefabs.editor_camera import EditorCamera
 from drone import GUIDrone
 import math
+
+
 class Environment:
     def __init__(self, terrain_image, terrain_texture, terrain_scale=(30, 4, 30)):
         self.terrain_image = terrain_image
@@ -9,9 +12,11 @@ class Environment:
         self.terrain_scale = terrain_scale
         self.entities = {}
         self.drones = []
+        self.drone_controllers = []
+        self.camera_mode = 'first_person'  # Default camera mode
 
     def setup(self):
-        """Set up just the environment with nothing in it"""
+        """Set up the environment with terrain and base entities"""
         # Create terrain
         terrain = Terrain(heightmap=self.terrain_image, skip=4)
         terrain_entity = Entity(
@@ -33,28 +38,44 @@ class Environment:
         )
         self.entities['safety_floor'] = safety_floor
 
-        # Create player
-        player = FirstPersonController(position=(0, 10, 0), scale=0.5)
-        player.gravity = 0.8
-        player.speed = 5
-        player.jump_height = 2
-        self.entities['player'] = player
+        # Create first person controller (enabled by default)
+        self.player = FirstPersonController(position=(0, 10, 0), scale=0.5)
+        self.player.gravity = 0.8
+        self.player.speed = 5
+        self.player.jump_height = 2
+        self.entities['player'] = self.player
+
+        # Create editor camera (disabled initially)
+        self.editor_camera = EditorCamera(enabled=False)
+
+        # Camera mode indicator
+        self.camera_text = Text(text="Camera: First Person (E for Editor Camera)",
+                                position=(0, -0.45), origin=(0, 0))
 
         # Position text
         position_text = Text(text="", position=(-0.5, -0.4))
 
         return self.entities
 
+    def toggle_camera(self):
+        """Switch between first person and editor camera"""
+        if self.camera_mode == 'first_person':
+            # Switch to editor camera
+            self.camera_mode = 'editor'
+            self.player.enabled = False
+            self.editor_camera.enabled = True
+            self.camera_text.text = "Camera: Editor Camera (Q for First Person)"
+        else:
+            # Switch to first person
+            self.camera_mode = 'first_person'
+            self.player.enabled = True
+            self.editor_camera.enabled = False
+            self.camera_text.text = "Camera: First Person (E for Editor Camera)"
+
     def make_drones(self, positions=None, model_path='model/drone.glb', color=color.orange, scale=0.5):
         """
         Create drones at specified positions or in a circle if none are given.
         Ensures drones are placed on the terrain surface.
-
-        Parameters:
-        - positions: Array of tuples with (x,z) coordinates (y will be determined by terrain), None for default circle
-        - model_path: Path to the drone model
-        - color: Color for the drones
-        - scale: Scale for the drones
         """
         drones = []
 
@@ -68,15 +89,13 @@ class Environment:
                 angle = (i / drone_count) * 2 * math.pi
                 x = math.cos(angle) * radius
                 z = math.sin(angle) * radius
-                # Store just x,z - we'll determine y with raycasting
                 positions.append((x, z))
 
         # Create drones at each position
         for i, pos in enumerate(positions):
-            # Handle both (x,z) and (x,y,z) formats for backward compatibility
+            # Handle both (x,z) and (x,y,z) formats
             if len(pos) == 2:
                 x, z = pos
-                # Start raycast high above the terrain to find ground
                 start_height = self.terrain_scale[1] * 2
                 ray_origin = Vec3(x, start_height, z)
             else:
@@ -94,70 +113,64 @@ class Environment:
 
             # Set the drone position based on terrain height
             if hit_info.hit:
-                y = hit_info.world_point.y + 0.5  # Add slight offset to prevent clipping
+                y = hit_info.world_point.y + 0.5  # Add offset to prevent clipping
             else:
-                # Fallback if raycast missed the terrain
                 y = 0
                 print(
                     f"Warning: Raycast missed terrain at position ({x}, {z}). Using y=0.")
 
             # Create the drone at the proper height
-            drone_creator = GUIDrone(
+            drone_controller = GUIDrone(
                 model_path=model_path,
                 color=color,
                 starter_position=(x, y, z),
                 scale=scale
             )
 
-            drone_entity = drone_creator.create_drone()
-            # Add ID to the drone for reference
-            drone_entity.id = i
+            drone_entity = drone_controller.create_drone()
+            drone_entity.id = i  # Add ID for reference
+
             drones.append(drone_entity)
+            self.drone_controllers.append(drone_controller)
 
         self.drones = drones
         self.entities['drones'] = drones
         return drones
 
-    # Method to update physics for all drones
-    def update_drones(self):
-        for drone in self.drones:
-            if hasattr(drone, 'physics') and drone.physics:
-                drone.physics.update()
+    def update(self):
+        """Update all entities in the environment"""
+        dt = time.dt
 
-    def move_drone_to(self, drone_id, target_position):
+        # Update all drones
+        for controller in self.drone_controllers:
+            controller.update(dt)
+
+        # Here you would update other physics entities in the environment
+
+    def move_drone(self, drone_id, target_position):
         """
-        Move a specific drone to the target position with realistic physics
+        Move a specific drone to the target position
 
         Parameters:
         - drone_id: ID of the drone to move
-        - target_position: (x, y, z) coordinate to move to
+        - target_position: (x,y,z) or (x,z) coordinates
 
         Returns:
-        - True if drone was found and command sent, False otherwise
+        - True if command was sent successfully, False otherwise
         """
-        if 0 <= drone_id < len(self.drones):
-            drone = self.drones[drone_id]
-            if hasattr(drone, 'physics') and drone.physics:
-                print(f"Moving drone {drone_id} to {target_position}")
-                drone.physics.move_to(target_position)
-                return True
+        if 0 <= drone_id < len(self.drone_controllers):
+            controller = self.drone_controllers[drone_id]
+            print(f"Moving drone {drone_id} to {target_position}")
+            return controller.move_to(target_position)
         else:
             print(f"Error: Drone ID {drone_id} not found")
-        return False
+            return False
 
-    def fly_all_drones_up(self, height=10):
-        """
-        Command all drones to fly up to the specified height
-
-        Parameters:
-        - height: Height to fly up to
-        """
-        for i, drone in enumerate(self.drones):
-            if hasattr(drone, 'physics') and drone.physics:
-                # Move up while keeping x,z position
-                target = (drone.x, drone.y + height, drone.z)
-                drone.physics.move_to(target)
-                print(f"Drone {i} flying up to {target}")
+    def get_drone_position(self, drone_id):
+        """Get the current position of a drone"""
+        if 0 <= drone_id < len(self.drones):
+            return self.drones[drone_id].position
+        return None
 
 
 # Usage example
@@ -166,14 +179,14 @@ if __name__ == '__main__':
     window.title = "3D Environment"
     scene.ambient_light = color.rgba(0.8, 0.8, 0.8, 1)
 
-    # Create just the environment
+    # Create environment
     env = Environment(
         terrain_image='assets/grass.png',
         terrain_texture='assets/grass.png',
         terrain_scale=(30, 4, 30)
     )
 
-    # Set up the environment
+    # Set up environment
     env.setup()
 
     # Add drones in default circle pattern
@@ -181,17 +194,77 @@ if __name__ == '__main__':
 
     # Display a countdown text
     countdown_text = Text(
-        text="Drones will take off in 5 seconds", position=(0, 0.4), origin=(0, 0))
+        text="Drones will move in 5 seconds", position=(0, 0.4), origin=(0, 0))
 
-    # Schedule drones to fly up after 5 seconds
-    def start_flying():
-        countdown_text.text = "Drones are now flying!"
-        env.fly_all_drones_up(height=10)
+    # Global variable for figure-8 animation
+    figure_8_time = 0
+
+    # Define input handler for camera switching
+    def input(key):
+        if key == 'q':  # Switch to first-person camera
+            if env.camera_mode == 'editor':  # Only switch if we're not already in this mode
+                env.toggle_camera()
+        elif key == 'e':  # Switch to editor camera
+            if env.camera_mode == 'first_person':  # Only switch if we're not already in this mode
+                env.toggle_camera()
+
+    # Function to continuously move drones in a figure-8 pattern
+    def update_figure_8_positions():
+        global figure_8_time
+        figure_8_time += 0.02  # Time increment for smooth movement
+
+        # Parameters for the figure-8
+        width = 15   # Width of the figure-8
+        height = 8   # Height of the figure-8
+        altitude = 12  # Flying height
+
+        # Move each drone along the figure-8 path with offset
+        for i in range(len(env.drones)):
+            # Offset each drone in time to distribute them along the path
+            t = figure_8_time + (i / len(env.drones)) * 2 * math.pi
+
+            # Figure-8 parametric equations
+            x = width * math.sin(t)
+            z = height * math.sin(2 * t)  # Creates the figure-8 shape
+            y = altitude
+
+            # Move the drone
+            env.move_drone(i, (x, y, z))
+
+        # Continue the movement
+        invoke(update_figure_8_positions, delay=0.1)
+
+    # Function to start figure-8 formation
+    def start_figure_8_formation():
+        countdown_text.text = "Drones moving in figure-8 formation!"
+        update_figure_8_positions()
+
+    # Function to move drones after delay
+    def move_drones_after_delay():
+        countdown_text.text = "Drones are now moving!"
+
+        # Move each drone to a different position in a circle
+        for i in range(len(env.drones)):
+            # Calculate a target position
+            angle = (i / len(env.drones)) * 2 * math.pi
+            x = math.cos(angle) * 10  # Larger radius
+            z = math.sin(angle) * 10
+            y = 8  # Height above ground
+
+            # Move the drone
+            env.move_drone(i, (x, y, z))
+
+        # Hide countdown text after 3 seconds
         invoke(lambda: setattr(countdown_text, 'enabled', False), delay=3)
 
-    invoke(start_flying, delay=5)
+        # Schedule figure-8 formation after circle formation
+        invoke(start_figure_8_formation, delay=10)
 
+    # Schedule movement
+    invoke(move_drones_after_delay, delay=5)
+
+    # Update function
     def update():
-        env.update_drones()
+        env.update()
 
     app.run()
