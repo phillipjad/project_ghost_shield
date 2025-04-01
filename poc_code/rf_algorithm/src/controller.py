@@ -4,6 +4,8 @@ from threading import Thread
 
 from utils.vector import Vector
 from constants.messaging_constants import ctrl_send_reg_msg
+from multicast_scripts.mc_lib.multicast_client import MulticastClient
+from multicast_scripts.mc_lib.multicast_server import MulticastServer
 
 CTRL_QUEUE: Queue
 
@@ -11,8 +13,8 @@ class Controller:
     def __init__(self, x: float, y: float, z: float) -> None:
         self.location = Vector(x, y, z)
         self.registered_drone_ids: set[str] = set()
-        self.mcast_send_sock = None  # Depends on backlog item
-        self.mcast_rec_sock = None  # Depends on backlog item
+        self.mcast_send_sock = MulticastServer(port=50000)
+        self.mcast_rec_sock = MulticastClient(port=50001)
 
     def get_location(self) -> Vector:
         return copy(self.location)
@@ -40,12 +42,8 @@ class Controller:
         return len(self.register_drone_ids)
 
     def send_registration_message(self) -> None:
-        """Used to broadcast message over multicast alerting drones they can register.
-
-        Raises:
-            NotImplementedError: _description_
-        """
-        raise NotImplementedError
+        msg = b"DRONE IS REGISTERING"
+        self.mcast_send_sock.send_message(msg)
 
     def receive_registration_message(self) -> None:
         """Used to receive registration messages.

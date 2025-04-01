@@ -2,7 +2,8 @@ from threading import Thread, Condition, Lock
 from queue import Queue
 
 from utils.vector import Vector
-
+from multicast_scripts.mc_lib.multicast_client import MulticastClient
+from multicast_scripts.mc_lib.multicast_server import MulticastServer
 
 class Drone:
     """Class representing a rudimentary drone. Capable of moving and broadcasting location"""
