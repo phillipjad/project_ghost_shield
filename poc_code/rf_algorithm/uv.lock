@@ -106,7 +106,7 @@ dependencies = [
     { name = "ruff" },
 ]
 wheels = [
-    { filename = "mclib-0.1.0-py3-none-any.whl", hash = "sha256:5769e4ba1271aa767e3573d771d25da91a10d8a969895d7f5a7b643e65b23f48" },
+    { filename = "mclib-0.1.0-py3-none-any.whl", hash = "sha256:79d82bd4f1c683ab28174fdc0e17e9be299d983fe5953123179c92d51d8baf37" },
 ]
 
 [package.metadata]

@@ -13,7 +13,7 @@ from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
 from utils.vector import Vector
-from constants.messaging_constants import ctrl_send_reg_msg
+from constants.messaging_constants import MSG_STR_E
 
 # CONSTANTS
 SYS_GRAPH: DroneGraph = DroneGraph(
@@ -32,21 +32,16 @@ REGISTRATION_TIMEOUT = SYSTEM_CONFIG["timeout"]
 CONTROLLER_QUEUE = Queue()
 
 def register_controller() -> None:
-    """Will need to expand later
-    """
     ctllr_thread = Thread(target=start_controller_thread, args=[CONTROLLER_QUEUE], daemon=True)
     ctllr_thread.start()
     return True
 
 
 def register_drones() -> None:
-    global DRONE_LIST
-    # In the future this method will actually work to grab all drones in system
-    # Either through config or multicast ping
-    CONTROLLER_QUEUE.put(ctrl_send_reg_msg) 
+    CONTROLLER_QUEUE.put(MSG_STR_E.CONTROLLER_ENABLE_REGISTRATION) 
 
     # Wait for drones to register
-    num_drones_registered = CONTROLLER_QUEUE.get(block=True, timeout=SYSTEM_CONFIG["timeout"])
+    num_drones_registered = CONTROLLER_QUEUE.get(block=True, timeout=REGISTRATION_TIMEOUT)
     return num_drones_registered
 
 

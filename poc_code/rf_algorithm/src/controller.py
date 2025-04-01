@@ -2,28 +2,25 @@ from copy import copy
 from queue import Queue
 from threading import Thread
 
+from nacl.signing import SignedMessage
+
 from utils.vector import Vector
-from constants.messaging_constants import ctrl_send_reg_msg
-from multicast_scripts.mc_lib.multicast_client import MulticastClient
-from multicast_scripts.mc_lib.multicast_server import MulticastServer
+from constants.messaging_constants import MSG_STR_E
+from mc_lib.multicast_server import MulticastServer
+from mc_lib.multicast_client import MulticastClient
 
 CTRL_QUEUE: Queue
 
 class Controller:
-    def __init__(self, x: float, y: float, z: float) -> None:
+    def __init__(self, id: str, x: float, y: float, z: float, port: int = 50000) -> None:
+        self.id = id
         self.location = Vector(x, y, z)
         self.registered_drone_ids: set[str] = set()
-        self.mcast_send_sock = MulticastServer(port=50000)
-        self.mcast_rec_sock = MulticastClient(port=50001)
+        self.mcast_send_sock = MulticastServer(port=port)
+        self.mcast_rec_sock = MulticastClient(port=port)
 
     def get_location(self) -> Vector:
         return copy(self.location)
-
-    def get_mcast_send_sock(self) -> None:
-        return self.mcast_send_sock
-
-    def get_mcast_rec_sock(self) -> None:
-        return self.mcast_rec_sock
 
     def register_drone(self, drone_id: str) -> bool:
         """Registers a drone to the controller. Returns true if successful, false otherwise.
@@ -42,8 +39,13 @@ class Controller:
         return len(self.register_drone_ids)
 
     def send_registration_message(self) -> None:
-        msg = b"DRONE IS REGISTERING"
-        self.mcast_send_sock.send_message(msg)
+        """Used to broadcast message over multicast alerting drones they can register.
+
+        Raises:
+            NotImplementedError: _description_
+        """
+        reg_msg: bytes = Message.process(MSG_STR_E.CONTROLLER_ENABLE_REGISTRATION) if False else b"REGISTRATION"
+        self.mcast_send_sock.send_message(reg_msg)
 
     def receive_registration_message(self) -> None:
         """Used to receive registration messages.
@@ -51,31 +53,36 @@ class Controller:
         Raises:
             NotImplementedError: _description_
         """
-        # This one will put into 
+
         raise NotImplementedError
 
     def listen(self, msg_queue: Queue) -> None:
-        raise NotImplementedError
+        self.mcast_rec_sock.listen(msg_queue)
 
-    def send(self, msg_queue: Queue) -> None:
-        raise NotImplementedError
+    def process_recv(self, msg_queue: Queue) -> None:
+        while (msg_queue.get()):
+            # Process message
+            pass
 
-    def main_thread_listener(self):
+    def main_thread_runner(self):
+        global CTRL_QUEUE
+
         # Blocks on .get()
-        while (msg := CTRL_QUEUE.get()) is not None:
-            if msg == ctrl_send_reg_msg:
-                self.send_registration_message()
-            else:
-                continue 
+        while (msg_type := CTRL_QUEUE.get()) is not None:
+            msg: SignedMessage = Message.serialize(self.id, msg_type) if False else MSG_STR_E.CONTROLLER_ENABLE_REGISTRATION.encode()
+            self.mcast_send_sock.send_message(msg)
 
 
 def start_controller_thread(x: float, y: float, z: float, controller_queue: Queue) -> None:
-    c = Controller(x, y, z)
-    q = Queue()
+    global CTRL_QUEUE
+
     CTRL_QUEUE = controller_queue
+    c = Controller("CTL1", x, y, z)
+    q = Queue()
 
     listener_thread = Thread(target=c.listen, args=[q], daemon=True)
-    sending_thread = Thread(target=c.send, args=[q], daemon=True)
+    processing_thread = Thread(target=c.receive, args=[q], daemon=True)
     listener_thread.start()
-    sending_thread.start()
-    c.main_thread_listener()
+    processing_thread.start()
+
+    c.main_thread_runner()
