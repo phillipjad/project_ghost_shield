@@ -14,7 +14,8 @@
         "unit_of_measurement": "m"
     },
     "system": {
-        "timeout_s": 10
+        "timeout_s": 10,
+        "signing_key": "Z29rdWlzbXlnb2F0aGVpc3Zlcnljb29s"
     },
     "field": {
         "x": 10,

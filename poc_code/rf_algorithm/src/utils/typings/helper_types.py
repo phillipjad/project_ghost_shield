@@ -22,6 +22,7 @@ class SensorsConfig(TypedDict):
 
 class SystemConfig(TypedDict):
     timeout_s: int
+    signing_key: str
 
 class FieldConfig(TypedDict):
     x: float

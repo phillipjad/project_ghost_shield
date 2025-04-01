@@ -1,7 +1,8 @@
 import struct
-import header
+import header as header
 import crc32c
 from nacl.signing import SigningKey
+from helpers.io_helpers import load_system_config
 # from nacl.signing import VerifyKey
 
 class Message:
@@ -12,7 +13,8 @@ class Message:
     #     self.y = y
     #     self.z = z
     #     self.duration = duration
-    
+    signing_key_bytes: bytes = load_system_config()[4]["signing_key"].encode()
+
     
     @staticmethod
     def curr_loc(d_id: str, msg_type:str, x: float, y: float, z: float) -> "Message":
@@ -22,15 +24,13 @@ class Message:
         msg = struct.pack('!H', len(hdr.d_id.encode())) + hdr.d_id.encode() + struct.pack('!H', len(hdr.msg_type.encode())) + hdr.msg_type.encode() + msg
         crc = crc32c.cr32c(msg)
 
-        signing_key = SigningKey.generate()
+        signing_key = SigningKey(Message.signing_key_bytes)
         signed = signing_key.sign(msg)
-        verify_key = signing_key.verify_key
-        verify_key_bytes = verify_key.encode()
         
         return msg 
     
     
-
+print(SigningKey(Message.signing_key_bytes).verify_key)
 m = Message.curr_loc("drone1", "location", 10.0, 20.0, 30.0)
 print(m)
 offset = 0
