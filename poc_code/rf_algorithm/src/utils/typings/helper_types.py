@@ -21,7 +21,7 @@ class SensorsConfig(TypedDict):
 
 
 class SystemConfig(TypedDict):
-    timeout: int
+    timeout_s: int
 
 class FieldConfig(TypedDict):
     x: float

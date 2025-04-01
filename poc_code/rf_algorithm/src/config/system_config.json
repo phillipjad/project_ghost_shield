@@ -14,7 +14,7 @@
         "unit_of_measurement": "m"
     },
     "system": {
-        "timeout": 10
+        "timeout_s": 10
     },
     "field": {
         "x": 10,

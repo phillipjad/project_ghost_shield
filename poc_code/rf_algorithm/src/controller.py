@@ -2,15 +2,18 @@ from copy import copy
 from queue import Queue
 from threading import Thread
 
+from nacl.signing import SignedMessage
+
 from utils.vector import Vector
-from constants.messaging_constants import ctrl_send_reg_msg, SOCKET_MESSAGE_TYPES
+from constants.messaging_constants import MSG_STR_E
 from mc_lib.multicast_server import MulticastServer
 from mc_lib.multicast_client import MulticastClient
 
 CTRL_QUEUE: Queue
 
 class Controller:
-    def __init__(self, x: float, y: float, z: float, port: int = 50000) -> None:
+    def __init__(self, id: str, x: float, y: float, z: float, port: int = 50000) -> None:
+        self.id = id
         self.location = Vector(x, y, z)
         self.registered_drone_ids: set[str] = set()
         self.mcast_send_sock = MulticastServer(port=port)
@@ -41,7 +44,7 @@ class Controller:
         Raises:
             NotImplementedError: _description_
         """
-        reg_msg: bytes = Message.registration()
+        reg_msg: bytes = Message.process(MSG_STR_E.CONTROLLER_ENABLE_REGISTRATION) if False else b"REGISTRATION"
         self.mcast_send_sock.send_message(reg_msg)
 
     def receive_registration_message(self) -> None:
@@ -50,7 +53,6 @@ class Controller:
         Raises:
             NotImplementedError: _description_
         """
-        # This one will put into 
 
         raise NotImplementedError
 
@@ -67,15 +69,15 @@ class Controller:
 
         # Blocks on .get()
         while (msg_type := CTRL_QUEUE.get()) is not None:
-            assert(isinstance(msg_type, str))
-            self.mcast_send_sock.send_message(msg_type.encode())
+            msg: SignedMessage = Message.serialize(self.id, msg_type) if False else MSG_STR_E.CONTROLLER_ENABLE_REGISTRATION.encode()
+            self.mcast_send_sock.send_message(msg)
 
 
 def start_controller_thread(x: float, y: float, z: float, controller_queue: Queue) -> None:
     global CTRL_QUEUE
 
     CTRL_QUEUE = controller_queue
-    c = Controller(x, y, z)
+    c = Controller("CTL1", x, y, z)
     q = Queue()
 
     listener_thread = Thread(target=c.listen, args=[q], daemon=True)
