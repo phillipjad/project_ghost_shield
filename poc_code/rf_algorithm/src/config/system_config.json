@@ -15,7 +15,8 @@
     },
     "system": {
         "timeout_s": 10,
-        "signing_key": "Z29rdWlzbXlnb2F0aGVpc3Zlcnljb29s"
+        "private_key": "HGaIxZKzrGq8V9Cx4atMgEq5n3Sx2OHrl4KHmglhpLM=",
+        "public_key": "jl1-5zvKoSnS0L8vRLhfxpkg49cR-UzH5wUuOrwBVjk="
     },
     "field": {
         "x": 10,

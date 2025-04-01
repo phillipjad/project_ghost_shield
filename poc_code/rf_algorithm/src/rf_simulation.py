@@ -8,7 +8,7 @@ from controller import start_controller_thread
 from drone import start_drone_process
 from field import Field
 from helpers.io_helpers import load_system_config
-from helpers.path_constants import SYSTEM_CONFIG_PATH
+from poc_code.rf_algorithm.src.constants.path_constants import SYSTEM_CONFIG_PATH
 from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock

@@ -1,8 +1,11 @@
 import struct
-import header as header
+from header import Header
 import crc32c
-from nacl.signing import SigningKey
+from nacl.signing import SigningKey, SignedMessage
+from nacl.encoding import Base64Encoder
 from helpers.io_helpers import load_system_config
+from constants.path_constants import SYSTEM_CONFIG_PATH
+from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
 # from nacl.signing import VerifyKey
 
 class Message:
@@ -13,35 +16,49 @@ class Message:
     #     self.y = y
     #     self.z = z
     #     self.duration = duration
-    signing_key_bytes: bytes = load_system_config()[4]["signing_key"].encode()
+    signing_key_bytes: bytes = load_system_config(SYSTEM_CONFIG_PATH)[4]["private_key"].encode()
+    signing_key_yeayaeaieubfa: SigningKey
 
-    
+    # Serializing methods
     @staticmethod
-    def curr_loc(d_id: str, msg_type:str, x: float, y: float, z: float) -> "Message":
-        fmt = f'!H{len(d_id.encode())}sH{len(msg_type.encode())}sfff'
-        payload = struct.pack(fmt, len(d_id.encode()), d_id.encode(), len(msg_type.encode()), msg_type.encode(), x, y, z)
-        hdr = header(d_id, msg_type)
-        msg = struct.pack('!H', len(hdr.d_id.encode())) + hdr.d_id.encode() + struct.pack('!H', len(hdr.msg_type.encode())) + hdr.msg_type.encode() + msg
-        crc = crc32c.cr32c(msg)
+    def curr_loc(d_id: str, msg_type:str, x: float, y: float, z: float) -> SignedMessage:
+        payload: bytes = struct.pack(f'!fff', x, y, z)
+        unsigned_nocrc_header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
+        msg = struct.pack(f'!{len(unsigned_nocrc_header)}s{len(payload)}s', unsigned_nocrc_header, payload)
+        msg_w_crc = struct.pack(f'!I{len(msg)}s', crc32c.crc32c(msg), msg)
 
-        signing_key = SigningKey(Message.signing_key_bytes)
-        signed = signing_key.sign(msg)
+        Message.signing_key_yeayaeaieubfa = signing_key = SigningKey(Message.signing_key_bytes, encoder=Base64Encoder)
+        signed: SignedMessage = signing_key.sign(msg_w_crc)
         
-        return msg 
+        return signed
+
+    # Deserializing methods
+    def curr_loc(msg: bytes) -> "CurrentLocation":
+        # msg = Message.signing_key_yeayaeaieubfa.verify_key.verify(m) 
+        crc = struct.unpack_from(f'!I', msg, offset)[0]
+        offset += 4
+        d_id = struct.unpack_from(f'!4s', msg, offset)[0].decode()
+        offset += 4
+        msg_type = struct.unpack_from(f'!B', msg, offset)[0]
+        offset += 1
+        payload_length = struct.unpack_from(f'!B', msg, offset)[0]
+        offset += 1
+        x, y, z = struct.unpack_from('!fff', msg, offset)
+        return CurrentLocation(x, y, z)
     
     
-print(SigningKey(Message.signing_key_bytes).verify_key)
-m = Message.curr_loc("drone1", "location", 10.0, 20.0, 30.0)
+m = Message.curr_loc("DRN1", MSG_STR_INT_MAP.get(MSG_STR_E.CURRENT_LOCATION), 10.0, 20.0, 30.0)
 print(m)
 offset = 0
-d_len = struct.unpack_from('!H', m, offset)[0]
-offset += 2
-d_id = struct.unpack_from(f'!{d_len}s', m, offset)[0].decode()
-offset += d_len
-msg_len = struct.unpack_from('!H', m, offset)[0]
-offset += 2
-msg_type = struct.unpack_from(f'!{msg_len}s', m, offset)[0].decode()
-offset += msg_len
+m = Message.signing_key_yeayaeaieubfa.verify_key.verify(m) 
+crc = struct.unpack_from(f'!I', m, offset)[0]
+offset += 4
+d_id = struct.unpack_from(f'!4s', m, offset)[0].decode()
+offset += 4
+msg_type = struct.unpack_from(f'!B', m, offset)[0]
+offset += 1
+payload_length = struct.unpack_from(f'!B', m, offset)[0]
+offset += 1
 x, y, z = struct.unpack_from('!fff', m, offset)
 print(f"Drone ID: {d_id}, Message Type: {msg_type}, Coordinates: ({x}, {y}, {z})")
 #     def __str__(self) -> str:
