@@ -2,6 +2,8 @@ from ursina import *
 from ursina.prefabs.first_person_controller import FirstPersonController
 from ursina.prefabs.editor_camera import EditorCamera
 
+
+
 class Environment:
     def __init__(self, terrain_image, terrain_texture, terrain_scale=(30, 4, 30)):
         self.terrain_image = terrain_image
@@ -29,7 +31,7 @@ class Environment:
         safety_floor = Entity(
             model='plane',
             scale=(floor_size, 1, floor_size),
-            position=(0, -2, 0),
+            position=(0, -1, 0),
             collider='box',
             visible=False
         )
@@ -65,3 +67,37 @@ class Environment:
             self.player.enabled = True
             self.editor_camera.enabled = False
             self.camera_text.text = "Camera: First Person (E for Editor Camera)"
+
+    def get_boundary(self):
+        """
+        Returns 4 coordinates (x, y) that define the boundary of the terrain
+        in the first quadrant (positive values only).
+
+        Note: These are actually (x, z) coordinates on the ground plane,
+        but returned as (x, y) pairs as requested.
+        """
+        # Get the scale of the terrain
+        x_scale = self.terrain_scale[0]
+        z_scale = self.terrain_scale[2]
+
+        # Calculate the maximum positive extent of the terrain
+        # Assuming the terrain is centered at the origin
+        max_x = x_scale / 2
+        max_z = z_scale / 2
+
+        # Define the 4 corners of the first quadrant boundary
+        # Starting from the origin and going clockwise
+        boundary_coords = [
+            (0, 0),         # Origin
+            (max_x, 0),     # Maximum x, minimum z
+            (max_x, max_z),  # Maximum x, maximum z
+            (0, max_z)      # Minimum x, maximum z
+        ]
+
+        return boundary_coords
+    
+    def get_height(self):
+        """
+        Returns the height of the terrain.
+        """
+        return self.terrain_scale[1]
