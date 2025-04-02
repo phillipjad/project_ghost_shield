@@ -11,19 +11,15 @@ SYS_GRAPH: DroneGraph = DroneGraph(
     multigraph=False
 )
 DRONE_LIST: list[Drone] = []
-MOVING_DRONES: set[Drone] = set()
 CONTROLLER: Controller = None
 # TODO
 GET_LOCATION: callable = None
 
 
-def mark_drone_moved(drone: Drone) -> None:
-    MOVING_DRONES.add(drone)
-
-
 def register_controller() -> None:
     global CONTROLLER
-    """Will need to expand later
+    """Will need to expand on this later.
+    Register the controller with a location.
     """
     curr_location = GET_LOCATION if False else (5, 5, 5)
     if CONTROLLER is None:
@@ -50,6 +46,8 @@ def register_drones() -> None:
 
 
 def populate_graph() -> None:
+    """Populates the graph with the drones and their distances and creates edges between each drone.
+    """
     global DRONE_LIST, SYS_GRAPH
     SYS_GRAPH.add_nodes_from(DRONE_LIST)
     for out_idx, out_d in enumerate(SYS_GRAPH.nodes()):
@@ -71,8 +69,7 @@ def populate_graph() -> None:
 
 
 def update_graph_edges() -> None:
-    """
-    Updates the edges of the graph with the current distance between every Drone.
+    """Updates the edges of the graph with the current distance between every Drone.
     """
     global SYS_GRAPH
 
@@ -110,6 +107,13 @@ def update_graph_edge(node1_id: int, node2_id: int, edge_data: Distance) -> None
 
 
 def update_egress_edges(node_id: int) -> None:
+    """Updates only the outgoing edges of the graph of a given node.
+    This is useful for when a drone moves and we want to update the edges
+    that are outgoing from that drone.
+
+    Args:
+        node_id (int): node ID of the drone to update edges for
+    """
     global SYS_GRAPH
 
     edges: list[tuple[int, int, Distance]] = SYS_GRAPH.out_edges(node_id)

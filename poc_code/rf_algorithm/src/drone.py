@@ -7,6 +7,14 @@ class Drone:
     def __init__(
         self, id: str, x_coordinate: float, y_coordinate: float, z_coordinate: float
     ) -> None:
+        """ Initializes the drone with the given id and coordinates.
+
+        Args:
+            id (str): gives the drone a unique id
+            x_coordinate (float): x coordinate of the drone
+            y_coordinate (float): y coordinate of the drone
+            z_coordinate (float): z coordinate of the drone
+        """
         self.id = id
         self.x = x_coordinate
         self.y = y_coordinate
@@ -22,6 +30,11 @@ class Drone:
         self.z += distance
 
     def move_from_vector(self, vector: Vector) -> None:
+        """"Moves the drone by the given vector.
+
+        Args:
+            vector (Vector): the vector to move the drone by
+        """
         # check if vector has exactly 3 components
         # checks if there should be no movement at all
         if vector.get_magnitude() == 0.0:
@@ -75,8 +88,15 @@ class Drone:
     def __repr__(self) -> str:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
 
-    # checks if two drones are equal by id, x, y, and z
     def __eq__(self, other) -> bool:
+        """This method is used to compare two drone objects by checking if two drones are equal by id, x, y, and z.
+
+        Args:
+            other (_type_): other drone object to compare to
+
+        Returns:
+            bool: True if the drones are equal, False otherwise
+        """
         if not isinstance(other, Drone):
             return False  # don't attempt to compare against unrelated types
         if (
