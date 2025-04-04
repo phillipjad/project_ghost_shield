@@ -13,6 +13,8 @@ from message_objects.enable_reg import EnableRegistration
 from message_objects.confirm_reg import ConfirmRegistration
 
 from message_objects.move_location import MoveLocation
+from message_objects.disable_rf_decep import DisableRFDeception
+from message_objects.enable_rf_deception import EnableRFDeception
 
 class Message:
     signing_key_bytes: bytes = load_system_config(SYSTEM_CONFIG_PATH)[4]["private_key"].encode()
@@ -49,24 +51,40 @@ class Message:
         msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
         return Message.sign_and_crc(msg)
 
-    def get_enable_registration(d_id: str) -> "Message":
+    def get_enable_registration(d_id: str) -> SignedMessage:
         msg_type = MSG_STR_E.CONTROLLER_ENABLE_REGISTRATION
 
         header: bytes = Header.from_bytes(d_id, msg_type, 0).to_bytes()
         msg = struct.pack(f'!{len(header)}s')
         return Message.sign_and_crc(msg)
 
-    def get_confirm_registration(d_id: str) -> "Message":
+    def get_confirm_registration(d_id: str) -> SignedMessage:
         msg_type = MSG_STR_E.DRONE_CONFIRM_REGISTRATION
 
         header: bytes = Header.from_bytes(d_id, msg_type, 0).to_bytes()
         msg = struct.pack(f'!{len(header)}s')
         return Message.sign_and_crc(msg)
     
-    def get_move_location(d_id: str, x: float, y: float, z: float) -> "Message":
+    def get_move_location(d_id: str, x: float, y: float, z: float) -> SignedMessage:
         msg_type = MSG_STR_E.DRONE_MOVE_LOCATION
         
         payload: bytes = struct.pack('!fff', x, y, z) 
+        header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
+        msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
+        return Message.sign_and_crc(msg)
+    
+    def get_enable_rf_deception(d_id: str, duration: float) -> SignedMessage:
+        msg_type = MSG_STR_E.DRONE_ENABLE_RF_DECEPTION
+
+        payload: bytes = struct.pack('!f', duration)
+        header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
+        msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
+        return Message.sign_and_crc(msg)
+
+    def get_disable_rf_deception(d_id: str, delay: float) -> SignedMessage:
+        msg_type = MSG_STR_E.DRONE_DISABLE_RF_DECEPTION
+
+        payload: bytes = struct.pack('!f', delay)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
         msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
         return Message.sign_and_crc(msg)
@@ -96,6 +114,17 @@ class Message:
         payload = MoveLocation.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
     
+    def enable_rf_deception(msg: SignedMessage) -> "Message":
+        msg = Message.check_crc_and_signature(msg)
+        header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
+        payload = EnableRFDeception.deserialize(msg[HEADER_SIZE_BYTES:])
+        return Message(header, payload)
+    
+    def disable_rf_deception(msg: SignedMessage) -> "Message":
+        msg = Message.check_crc_and_signature(msg)
+        header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
+        payload = DisableRFDeception.deserialize(msg[HEADER_SIZE_BYTES:])
+        return Message(header, payload)
 
     
     
