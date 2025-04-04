@@ -55,6 +55,8 @@ class Message:
         payload = CurrentLocation.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
     
+
+    
     
 # m = Message.curr_loc("DRN1", MSG_STR_INT_MAP.get(MSG_STR_E.CURRENT_LOCATION), 10.0, 20.0, 30.0)
 # print(m)
