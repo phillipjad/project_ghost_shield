@@ -8,13 +8,14 @@ from constants.path_constants import SYSTEM_CONFIG_PATH
 from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
 from constants.proj_constants import HEADER_SIZE_BYTES
 from message_objects.current_location import CurrentLocation
+from message_objects.msg_obj_abc import MsgObject
 
 class Message:
     signing_key_bytes: bytes = load_system_config(SYSTEM_CONFIG_PATH)[4]["private_key"].encode()
     signing_key: SigningKey = SigningKey(signing_key_bytes, encoder=Base64Encoder)
 
-    def __init__(self, header: Header, payload: any):
-        self.header = Header
+    def __init__(self, header: Header, payload: MsgObject):
+        self.header = header
         self.payload = payload
 
     # CRC and signature
@@ -39,7 +40,7 @@ class Message:
     def get_curr_loc_msg(d_id: str, curr_loc: CurrentLocation) -> SignedMessage:
         msg_type = MSG_STR_E.CURRENT_LOCATION
         
-        payload: bytes = struct.pack(f'!fff', x, y, z)
+        payload: bytes = curr_loc.serialize() 
         header: bytes = Header.from_bytes(d_id, msg_type, len(payload)).to_bytes()
         msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
         msg_w_crc = struct.pack(f'!I{len(msg)}s', crc32c.crc32c(msg), msg)

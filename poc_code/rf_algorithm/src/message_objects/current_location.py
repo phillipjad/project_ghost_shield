@@ -1,6 +1,8 @@
 import struct
 
-class CurrentLocation:
+from msg_obj_abc import MsgObject
+
+class CurrentLocation(MsgObject):
     def __init__(self, x: float, y: float, z: float):
         self.x = x
         self.y = y
