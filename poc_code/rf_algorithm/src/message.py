@@ -9,12 +9,16 @@ from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
 from constants.proj_constants import HEADER_SIZE_BYTES
 from message_objects.current_location import CurrentLocation
 from message_objects.msg_obj_abc import MsgObject
+from message_objects.enable_reg import EnableRegistration
+from message_objects.confirm_reg import ConfirmRegistration
+
+from message_objects.move_location import MoveLocation
 
 class Message:
     signing_key_bytes: bytes = load_system_config(SYSTEM_CONFIG_PATH)[4]["private_key"].encode()
     signing_key: SigningKey = SigningKey(signing_key_bytes, encoder=Base64Encoder)
 
-    def __init__(self, header: Header, payload: MsgObject):
+    def __init__(self, header: Header, payload: MsgObject | None):
         self.header = header
         self.payload = payload
 
@@ -37,22 +41,59 @@ class Message:
 
     # Serializing methods
     @staticmethod
-    def get_curr_loc_msg(d_id: str, curr_loc: CurrentLocation) -> SignedMessage:
+    def get_curr_loc_msg(d_id: str, x: float, y: float, z: float) -> SignedMessage:
         msg_type = MSG_STR_E.CURRENT_LOCATION
         
-        payload: bytes = curr_loc.serialize() 
-        header: bytes = Header.from_bytes(d_id, msg_type, len(payload)).to_bytes()
+        payload: bytes = struct.pack('!fff', x, y, z) 
+        header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
         msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
-        msg_w_crc = struct.pack(f'!I{len(msg)}s', crc32c.crc32c(msg), msg)
-        signed: SignedMessage = Message.signing_key.sign(msg_w_crc)
-        return signed
+        return Message.sign_and_crc(msg)
+
+    def get_enable_registration(d_id: str) -> "Message":
+        msg_type = MSG_STR_E.CONTROLLER_ENABLE_REGISTRATION
+
+        header: bytes = Header.from_bytes(d_id, msg_type, 0).to_bytes()
+        msg = struct.pack(f'!{len(header)}s')
+        return Message.sign_and_crc(msg)
+
+    def get_confirm_registration(d_id: str) -> "Message":
+        msg_type = MSG_STR_E.DRONE_CONFIRM_REGISTRATION
+
+        header: bytes = Header.from_bytes(d_id, msg_type, 0).to_bytes()
+        msg = struct.pack(f'!{len(header)}s')
+        return Message.sign_and_crc(msg)
+    
+    def get_move_location(d_id: str, x: float, y: float, z: float) -> "Message":
+        msg_type = MSG_STR_E.DRONE_MOVE_LOCATION
+        
+        payload: bytes = struct.pack('!fff', x, y, z) 
+        header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
+        msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
+        return Message.sign_and_crc(msg)
 
     # Deserializing methods
     def curr_loc(msg: SignedMessage) -> "Message":
-        # msg = Message.signing_key_yeayaeaieubfa.verify_key.verify(m)
+        msg: bytes = Message.check_crc_and_signature(msg)
+        header: Header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
+        payload: CurrentLocation = CurrentLocation.deserialize(msg[HEADER_SIZE_BYTES:])
+        return Message(header, payload)
+
+    def enable_registration(msg: SignedMessage) -> "Message":
+        msg = Message.check_crc_and_signature(msg)
+        header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
+        payload = EnableRegistration()
+        return Message(header, payload)
+
+    def confirm_registration(msg: SignedMessage) -> "Message":
+        msg = Message.check_crc_and_signature(msg)
+        header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
+        payload = ConfirmRegistration.deserialize(msg[HEADER_SIZE_BYTES:])
+        return Message(header, payload)
+    
+    def move_loc(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header(msg[0:HEADER_SIZE_BYTES])
-        payload = CurrentLocation.deserialize(msg[HEADER_SIZE_BYTES:])
+        payload = MoveLocation.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
     
 
