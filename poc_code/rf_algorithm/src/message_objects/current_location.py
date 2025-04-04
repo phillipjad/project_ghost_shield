@@ -12,7 +12,7 @@ class CurrentLocation(MsgObject):
     def deserialize(payload: bytes, offset: int = 0) -> tuple[int, "CurrentLocation"]:
         x, y, z = struct.unpack_from('!fff', payload, offset)
         offset += 4
-        return CurrentLocation(x, y, z)
+        return (offset, CurrentLocation(x, y, z))
 
     def serialize(self) -> bytes:
         return struct.pack('!fff', self.x, self.y, self.z)
