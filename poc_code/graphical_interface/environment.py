@@ -3,7 +3,6 @@ from ursina.prefabs.first_person_controller import FirstPersonController
 from ursina.prefabs.editor_camera import EditorCamera
 
 
-
 class Environment:
     def __init__(self, terrain_image, terrain_texture, terrain_scale=(30, 4, 30)):
         self.terrain_image = terrain_image
@@ -45,7 +44,7 @@ class Environment:
         self.entities['player'] = self.player
 
         # Create editor camera (disabled initially)
-        self.editor_camera = EditorCamera(enabled=False)
+        self.editor_camera = EditorCamera(enabled=False, position=(-1, 10, 0))
 
         # Camera mode indicator
         self.camera_text = Text(text="Camera: First Person (E for Editor Camera)",
@@ -61,6 +60,7 @@ class Environment:
             self.player.enabled = False
             self.editor_camera.enabled = True
             self.camera_text.text = "Camera: Editor Camera (Q for First Person)"
+            print("looking at: ",self.editor_camera.look_at)
         else:
             # Switch to first person
             self.camera_mode = 'first_person'
@@ -68,36 +68,27 @@ class Environment:
             self.editor_camera.enabled = False
             self.camera_text.text = "Camera: First Person (E for Editor Camera)"
 
+
     def get_boundary(self):
         """
-        Returns 4 coordinates (x, y) that define the boundary of the terrain
-        in the first quadrant (positive values only).
-
-        Note: These are actually (x, z) coordinates on the ground plane,
-        but returned as (x, y) pairs as requested.
+        Returns the complete 3D boundary limits of the terrain.
+        
+        Returns:
+            dict: Dictionary with keys 'x', 'y', 'z', each containing a (min, max) tuple
         """
-        # Get the scale of the terrain
-        x_scale = self.terrain_scale[0]
-        z_scale = self.terrain_scale[2]
+        # Extract terrain dimensions
+        width, height, depth = self.terrain_scale
 
-        # Calculate the maximum positive extent of the terrain
-        # Assuming the terrain is centered at the origin
-        max_x = x_scale / 2
-        max_z = z_scale / 2
+        # Calculate boundary limits
+        min_x = -width / 2
+        max_x = width / 2
+        min_z = -depth / 2
+        max_z = depth / 2
+        min_y = 0
+        max_y = height
 
-        # Define the 4 corners of the first quadrant boundary
-        # Starting from the origin and going clockwise
-        boundary_coords = [
-            (0, 0),         # Origin
-            (max_x, 0),     # Maximum x, minimum z
-            (max_x, max_z),  # Maximum x, maximum z
-            (0, max_z)      # Minimum x, maximum z
-        ]
-
-        return boundary_coords
-    
-    def get_height(self):
-        """
-        Returns the height of the terrain.
-        """
-        return self.terrain_scale[1]
+        return {
+            'x': (min_x, max_x),
+            'y': (min_y, max_y),
+            'z': (min_z, max_z)
+        }

@@ -28,8 +28,6 @@ class Enviroment_Manager:
             starter_position=(1, 5, 1),
         ))
 
-        drone = self.drones[0]
-
         # Move after 2 seconds
         invoke(lambda: self.drones[0].move_to((5, 5, 5)), delay=2)
         # Move again after 5 seconds
@@ -37,7 +35,7 @@ class Enviroment_Manager:
         # And return to start after 8 seconds
         invoke(lambda: self.drones[0].move_to((1, 5, 1)), delay=8)
 
-        print(self.environment.get_boundary())
+        print("boundary:", self.environment.get_boundary())
 
 
     def run(self):
