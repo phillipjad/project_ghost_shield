@@ -10,6 +10,8 @@ from constants.proj_constants import HEADER_SIZE_BYTES
 from message_objects.current_location import CurrentLocation
 from message_objects.msg_obj_abc import MsgObject
 
+from message_objects.move_location import MoveLocation
+
 class Message:
     signing_key_bytes: bytes = load_system_config(SYSTEM_CONFIG_PATH)[4]["private_key"].encode()
     signing_key: SigningKey = SigningKey(signing_key_bytes, encoder=Base64Encoder)
@@ -46,6 +48,17 @@ class Message:
         msg_w_crc = struct.pack(f'!I{len(msg)}s', crc32c.crc32c(msg), msg)
         signed: SignedMessage = Message.signing_key.sign(msg_w_crc)
         return signed
+    
+    @staticmethod
+    def get_move_loc_msg(d_id: str, move_loc: MoveLocation) -> SignedMessage:
+        msg_type = MSG_STR_E.MOVE_LOCATION
+        
+        payload: bytes = move_loc.serialize() 
+        header: bytes = Header.from_bytes(d_id, msg_type, len(payload)).to_bytes()
+        msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
+        msg_w_crc = struct.pack(f'!I{len(msg)}s', crc32c.crc32c(msg), msg)
+        signed: SignedMessage = Message.signing_key.sign(msg_w_crc)
+        return signed
 
     # Deserializing methods
     def curr_loc(msg: SignedMessage) -> "Message":
@@ -53,6 +66,13 @@ class Message:
         msg = Message.check_crc_and_signature(msg)
         header = Header(msg[0:HEADER_SIZE_BYTES])
         payload = CurrentLocation.deserialize(msg[HEADER_SIZE_BYTES:])
+        return Message(header, payload)
+    
+    def move_loc(msg: SignedMessage) -> "Message":
+        # msg = Message.signing_key_yeayaeaieubfa.verify_key.verify(m)
+        msg = Message.check_crc_and_signature(msg)
+        header = Header(msg[0:HEADER_SIZE_BYTES])
+        payload = MoveLocation.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
     
     
