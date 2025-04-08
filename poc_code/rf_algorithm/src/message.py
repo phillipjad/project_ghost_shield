@@ -73,38 +73,39 @@ class Message:
     def get_enable_jammer(d_id: str, duration: float) -> SignedMessage:
         msg_type = MSG_STR_E.ENABLE_JAMMER
 
-        payload: bytes = struct.pack('!f', duration) 
-        header: bytes = Header.from_bytes(d_id, msg_type, 0).to_bytes()
-        msg = struct.pack(f'!{len(header)}s')
+        payload: bytes = struct.pack('!f', duration)
+        header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
+        msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
         return Message.sign_and_crc(msg)
     
+    @staticmethod
     def get_disable_jammer(d_id: str, disable_delay: float) -> SignedMessage:
         msg_type = MSG_STR_E.DISABLE_JAMMER
 
-        payload: bytes = struct.pack('!f', disable_delay) 
-        header: bytes = Header.from_bytes(d_id, msg_type, 0).to_bytes()
-        msg = struct.pack(f'!{len(header)}s')
+        payload: bytes = struct.pack('!f', disable_delay)
+        header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
+        msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
         return Message.sign_and_crc(msg)
 
     @staticmethod
     def get_enable_registration(d_id: str) -> SignedMessage:
-        msg_type = MSG_STR_E.CONTROLLER_ENABLE_REGISTRATION
+        msg_type = MSG_STR_E.ENABLE_REGISTRATION
 
-        header: bytes = Header.from_bytes(d_id, msg_type, 0).to_bytes()
+        header: bytes = Header(d_id, msg_type, 0).to_bytes()
         msg = struct.pack(f'!{len(header)}s')
         return Message.sign_and_crc(msg)
 
     @staticmethod
     def get_confirm_registration(d_id: str) -> SignedMessage:
-        msg_type = MSG_STR_E.DRONE_CONFIRM_REGISTRATION
+        msg_type = MSG_STR_E.CONFIRM_REGISTRATION
 
-        header: bytes = Header.from_bytes(d_id, msg_type, 0).to_bytes()
+        header: bytes = Header(d_id, msg_type, 0).to_bytes()
         msg = struct.pack(f'!{len(header)}s')
         return Message.sign_and_crc(msg)
     
     @staticmethod
     def get_enable_rf_deception(d_id: str, duration: float) -> SignedMessage:
-        msg_type = MSG_STR_E.DRONE_ENABLE_RF_DECEPTION
+        msg_type = MSG_STR_E.ENABLE_RF_DECEPTION
 
         payload: bytes = struct.pack('!f', duration)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()

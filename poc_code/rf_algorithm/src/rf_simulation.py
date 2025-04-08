@@ -117,11 +117,11 @@ def update_egress_edges(node_id: int) -> None:
 # TODO - Add logic for controller (location, multicast, etc.)
 
 
-def main(debug: bool) -> None:
+def main(release: bool) -> None:
     global SYS_GRAPH, NUM_EXPECTED_DRONES
 
     for i in range(NUM_EXPECTED_DRONES):
-        mp.Process(target=start_drone_process, args=[i, 0, 0, 0]).start() if debug else mp.Process(target=start_drone_process, args=[i, 0, 0, 0]).start()
+        mp.Process(target=start_drone_process, args=[i, 0, 0, 0]).start() if not release else mp.Process(target=start_drone_process, args=[i, 0, 0, 0]).start()
 
     if not register_controller():
         raise RuntimeError("Failed to register controller")
@@ -147,7 +147,7 @@ if __name__ == "__main__":
         prog='Project Ghost Shield - RF Simulation',
         description='***Proof of Concept Simulation for Project Ghost Shield***'
     )
-    parser.add_argument('-d', '--debug', action='store_true', help='flag denoting whether to run program in debug mode or in release mode.')
+    parser.add_argument('-r', '--release', action='store_true', help='If flag is set to true, it runs the program in release mode instead of debug.')
     args = parser.parse_args()
-    debug = args.debug
-    main(debug)
+    release = args.release
+    main(release)

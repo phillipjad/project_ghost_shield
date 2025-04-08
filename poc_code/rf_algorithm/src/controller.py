@@ -44,7 +44,7 @@ class Controller:
         Raises:
             NotImplementedError: _description_
         """
-        reg_msg: bytes = Message.process(MSG_STR_E.CONTROLLER_ENABLE_REGISTRATION) if False else b"REGISTRATION"
+        reg_msg: bytes = Message.process(MSG_STR_E.ENABLE_REGISTRATION) if False else b"REGISTRATION"
         self.mcast_send_sock.send_message(reg_msg)
 
     def receive_registration_message(self) -> None:
@@ -69,7 +69,7 @@ class Controller:
 
         # Blocks on .get()
         while (msg_type := CTRL_QUEUE.get()) is not None:
-            msg: SignedMessage = Message.serialize(self.id, msg_type) if False else MSG_STR_E.CONTROLLER_ENABLE_REGISTRATION.encode()
+            msg: SignedMessage = Message.serialize(self.id, msg_type) if False else MSG_STR_E.ENABLE_REGISTRATION.encode()
             self.mcast_send_sock.send_message(msg)
 
 
