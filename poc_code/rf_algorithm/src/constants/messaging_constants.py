@@ -1,8 +1,8 @@
+# ruff: noqa: N801
 from enum import StrEnum
 from types import MappingProxyType
 
-
-ctrl_send_reg_msg="C_REG_MSG"
+ctrl_send_reg_msg = "C_REG_MSG"
 
 MSG_INT_STR_MAP: MappingProxyType[int, str] = {
     0x00: "RESERVED_INVALID",
@@ -13,7 +13,7 @@ MSG_INT_STR_MAP: MappingProxyType[int, str] = {
     0x05: "ENABLE_RF_DECEPTION",
     0x06: "DISABLE_RF_DECEPTION",
     0x07: "ENABLE_REGISTRATION",
-    0x08: "CONFIRM_REGISTRATION"
+    0x08: "CONFIRM_REGISTRATION",
 }
 
 MSG_STR_INT_MAP: MappingProxyType[str, int] = {
@@ -25,8 +25,9 @@ MSG_STR_INT_MAP: MappingProxyType[str, int] = {
     "ENABLE_RF_DECEPTION": 0x05,
     "DISABLE_RF_DECEPTION": 0x06,
     "ENABLE_REGISTRATION": 0x07,
-    "CONFIRM_REGISTRATION": 0x08
+    "CONFIRM_REGISTRATION": 0x08,
 }
+
 
 class MSG_STR_E(StrEnum):
     RESERVED_INVALID = "RESERVED_INVALID"

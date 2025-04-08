@@ -1,29 +1,32 @@
 import struct
-from header import Header
-import crc32c
-from nacl.signing import SigningKey, SignedMessage
-from nacl.encoding import Base64Encoder
-from helpers.io_helpers import load_system_config
-from constants.path_constants import SYSTEM_CONFIG_PATH
-from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
-from constants.proj_constants import HEADER_SIZE_BYTES
-from message_objects.current_location import CurrentLocation
-from message_objects.move_location import MoveLocation
-from message_objects.enable_jammer import EnableJammer
-from message_objects.disable_jammer import DisableJammer
-from message_objects.msg_obj_abc import MsgObject
-from message_objects.enable_reg import EnableRegistration
-from message_objects.confirm_reg import ConfirmRegistration
 
-from message_objects.move_location import MoveLocation
+import crc32c
+from nacl.encoding import Base64Encoder
+from nacl.signing import SignedMessage, SigningKey
+
+from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
+from constants.path_constants import SYSTEM_CONFIG_PATH
+from constants.proj_constants import HEADER_SIZE_BYTES
+from header import Header
+from helpers.io_helpers import load_system_config
+from message_objects.confirm_reg import ConfirmRegistration
+from message_objects.current_location import CurrentLocation
+from message_objects.disable_jammer import DisableJammer
 from message_objects.disable_rf_decep import DisableRFDeception
+from message_objects.enable_jammer import EnableJammer
+from message_objects.enable_reg import EnableRegistration
 from message_objects.enable_rf_deception import EnableRFDeception
+from message_objects.move_location import MoveLocation
+from message_objects.msg_obj_abc import MsgObject
+
 
 class Message:
-    signing_key_bytes: bytes = load_system_config(SYSTEM_CONFIG_PATH)[4]["private_key"].encode()
+    signing_key_bytes: bytes = load_system_config(SYSTEM_CONFIG_PATH)[4][
+        "private_key"
+    ].encode()
     signing_key: SigningKey = SigningKey(signing_key_bytes, encoder=Base64Encoder)
 
-    def __init__(self, header: Header, payload: MsgObject | None):
+    def __init__(self, header: Header, payload: MsgObject | None) -> None:
         self.header = header
         self.payload = payload
 
@@ -31,7 +34,7 @@ class Message:
     @staticmethod
     def check_crc_and_signature(msg: SignedMessage) -> bytes | None:
         unsigned_msg = Message.signing_key.verify_key.verify(msg, encoder=Base64Encoder)
-        crc = struct.unpack_from('I', unsigned_msg, 0)
+        crc = struct.unpack_from("I", unsigned_msg, 0)
         reconstructed_crc = crc32c.crc32c(unsigned_msg[4:])
         if crc == reconstructed_crc:
             return unsigned_msg[4:]
@@ -40,51 +43,50 @@ class Message:
     @staticmethod
     def sign_and_crc(msg: bytes) -> SignedMessage:
         crc = crc32c.crc32c(msg)
-        msg = struct.pack(f'!I{len(msg)}s', crc, msg)
+        msg = struct.pack(f"!I{len(msg)}s", crc, msg)
         return Message.signing_key.sign(msg, encoder=Base64Encoder)
 
     # Message helper functions
     @staticmethod
     def get_msg_type(msg: SignedMessage) -> int:
         # Offset=72 to skip the signature, crc, and source id bytes.
-        return struct.unpack_from(f'!B', msg, offset=72)[0]
-
+        return struct.unpack_from("!B", msg, offset=72)[0]
 
     # Serializing methods
     @staticmethod
     def get_curr_loc_msg(d_id: str, x: float, y: float, z: float) -> SignedMessage:
         msg_type = MSG_STR_E.CURRENT_LOCATION
-        
-        payload: bytes = struct.pack('!fff', x, y, z) 
+
+        payload: bytes = struct.pack("!fff", x, y, z)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
-        msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
+        msg = struct.pack(f"!{len(header)}s{len(payload)}s", header, payload)
         return Message.sign_and_crc(msg)
-    
+
     @staticmethod
     def get_move_location(d_id: str, x: float, y: float, z: float) -> SignedMessage:
         msg_type = MSG_STR_E.MOVE_LOCATION
-        
-        payload: bytes = struct.pack('!fff', x, y, z) 
+
+        payload: bytes = struct.pack("!fff", x, y, z)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
-        msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
+        msg = struct.pack(f"!{len(header)}s{len(payload)}s", header, payload)
         return Message.sign_and_crc(msg)
-    
+
     @staticmethod
     def get_enable_jammer(d_id: str, duration: float) -> SignedMessage:
         msg_type = MSG_STR_E.ENABLE_JAMMER
 
-        payload: bytes = struct.pack('!f', duration)
+        payload: bytes = struct.pack("!f", duration)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
-        msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
+        msg = struct.pack(f"!{len(header)}s{len(payload)}s", header, payload)
         return Message.sign_and_crc(msg)
-    
+
     @staticmethod
     def get_disable_jammer(d_id: str, disable_delay: float) -> SignedMessage:
         msg_type = MSG_STR_E.DISABLE_JAMMER
 
-        payload: bytes = struct.pack('!f', disable_delay)
+        payload: bytes = struct.pack("!f", disable_delay)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
-        msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
+        msg = struct.pack(f"!{len(header)}s{len(payload)}s", header, payload)
         return Message.sign_and_crc(msg)
 
     @staticmethod
@@ -92,7 +94,7 @@ class Message:
         msg_type = MSG_STR_E.ENABLE_REGISTRATION
 
         header: bytes = Header(d_id, msg_type, 0).to_bytes()
-        msg = struct.pack(f'!{len(header)}s')
+        msg = struct.pack(f"!{len(header)}s")
         return Message.sign_and_crc(msg)
 
     @staticmethod
@@ -100,25 +102,25 @@ class Message:
         msg_type = MSG_STR_E.CONFIRM_REGISTRATION
 
         header: bytes = Header(d_id, msg_type, 0).to_bytes()
-        msg = struct.pack(f'!{len(header)}s')
+        msg = struct.pack(f"!{len(header)}s")
         return Message.sign_and_crc(msg)
-    
+
     @staticmethod
     def get_enable_rf_deception(d_id: str, duration: float) -> SignedMessage:
         msg_type = MSG_STR_E.ENABLE_RF_DECEPTION
 
-        payload: bytes = struct.pack('!f', duration)
+        payload: bytes = struct.pack("!f", duration)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
-        msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
+        msg = struct.pack(f"!{len(header)}s{len(payload)}s", header, payload)
         return Message.sign_and_crc(msg)
 
     @staticmethod
     def get_disable_rf_deception(d_id: str, delay: float) -> SignedMessage:
-        msg_type = MSG_STR_E.DRONE_DISABLE_RF_DECEPTION
+        msg_type = MSG_STR_E.DISABLE_RF_DECEPTION
 
-        payload: bytes = struct.pack('!f', delay)
+        payload: bytes = struct.pack("!f", delay)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
-        msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
+        msg = struct.pack(f"!{len(header)}s{len(payload)}s", header, payload)
         return Message.sign_and_crc(msg)
 
     # Deserializing methods
@@ -128,21 +130,21 @@ class Message:
         header: Header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload: CurrentLocation = CurrentLocation.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
-    
+
     @staticmethod
     def move_loc(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header(msg[0:HEADER_SIZE_BYTES])
         payload: MoveLocation = MoveLocation.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
-    
+
     @staticmethod
     def enable_jammer(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload: EnableJammer = EnableJammer.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
-    
+
     @staticmethod
     def disable_jammer(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
@@ -163,14 +165,14 @@ class Message:
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload = ConfirmRegistration.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
-    
+
     @staticmethod
     def enable_rf_deception(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload = EnableRFDeception.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
-    
+
     @staticmethod
     def disable_rf_deception(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
@@ -183,12 +185,16 @@ class Message:
         parse_function_map = {
             MSG_STR_INT_MAP[MSG_STR_E.CURRENT_LOCATION]: Message.curr_loc,
             MSG_STR_INT_MAP[MSG_STR_E.MOVE_LOCATION]: Message.move_loc,
-            MSG_STR_INT_MAP[MSG_STR_E.ENABLE_JAMMER]: None,
-            MSG_STR_INT_MAP[MSG_STR_E.DISABLE_JAMMER]: None,
+            MSG_STR_INT_MAP[MSG_STR_E.ENABLE_JAMMER]: Message.enable_jammer,
+            MSG_STR_INT_MAP[MSG_STR_E.DISABLE_JAMMER]: Message.disable_jammer,
             MSG_STR_INT_MAP[MSG_STR_E.ENABLE_RF_DECEPTION]: Message.enable_rf_deception,
-            MSG_STR_INT_MAP[MSG_STR_E.DISABLE_RF_DECEPTION]: Message.disable_rf_deception,
+            MSG_STR_INT_MAP[
+                MSG_STR_E.DISABLE_RF_DECEPTION
+            ]: Message.disable_rf_deception,
             MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]: Message.enable_registration,
-            MSG_STR_INT_MAP[MSG_STR_E.CONFIRM_REGISTRATION]: Message.confirm_registration,
+            MSG_STR_INT_MAP[
+                MSG_STR_E.CONFIRM_REGISTRATION
+            ]: Message.confirm_registration,
         }
 
         try:
@@ -196,29 +202,3 @@ class Message:
             return parse_function_map[msg_type](msg)
         except AttributeError:
             return None
-
-
-    
-    
-# m = Message.curr_loc("DRN1", MSG_STR_INT_MAP.get(MSG_STR_E.CURRENT_LOCATION), 10.0, 20.0, 30.0)
-# print(m)
-# offset = 0
-# m = Message.signing_key_yeayaeaieubfa.verify_key.verify(m) 
-# crc = struct.unpack_from(f'!I', m, offset)[0]
-# offset += 4
-# d_id = struct.unpack_from(f'!4s', m, offset)[0].decode()
-# offset += 4
-# msg_type = struct.unpack_from(f'!B', m, offset)[0]
-# offset += 1
-# payload_length = struct.unpack_from(f'!B', m, offset)[0]
-# offset += 1
-# x, y, z = struct.unpack_from('!fff', m, offset)
-# print(f"Drone ID: {d_id}, Message Type: {msg_type}, Coordinates: ({x}, {y}, {z})")
-#     def __str__(self) -> str:
-#         return f"""
-#             Drone {self.id}
-#             X Coordinate: {self.x}
-#             Y Coordinate: {self.y}
-#             Z Coordinate: {self.z}
-#         """
-#

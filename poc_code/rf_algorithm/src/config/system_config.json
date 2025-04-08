@@ -4,11 +4,15 @@
         "mc_port_range": "8000:8080"
     },
     "controller": {
+        "id": "CTL1",
         "mc_port": 12345
     },
-    "drones": {
-        "num_drones": 4
-    },
+    "drones": [
+        {"id": "DRN1"},
+        {"id": "DRN2"},
+        {"id": "DRN3"},
+        {"id": "DRN4"}
+    ],
     "sensors": {
         "max_range": 10,
         "unit_of_measurement": "m"

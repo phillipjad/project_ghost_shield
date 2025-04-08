@@ -13,7 +13,7 @@ from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
 from utils.vector import Vector
-from constants.messaging_constants import MSG_STR_E
+from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
 
 # CONSTANTS
 SYS_GRAPH: DroneGraph = DroneGraph(
@@ -26,19 +26,20 @@ SYS_GRAPH: DroneGraph = DroneGraph(
     load_system_config(SYSTEM_CONFIG_PATH)
 )
 
-GET_LOCATION: callable = None
-NUM_EXPECTED_DRONES = DRONES_CONFIG["num_drones"]
+get_location: callable = None
+DRONE_LIST = DRONES_CONFIG["drones"]
 REGISTRATION_TIMEOUT = SYSTEM_CONFIG["timeout"]
 CONTROLLER_QUEUE = Queue()
 
 def register_controller() -> None:
-    ctllr_thread = Thread(target=start_controller_thread, args=[CONTROLLER_QUEUE], daemon=True)
+    current_location_xyz: list[float, float, float] = get_location() if False else (5, 5, 5)
+    ctllr_thread = Thread(target=start_controller_thread, args=[CONTROLLER_CONFIG['id'], CONTROLLER_QUEUE, *current_location_xyz], daemon=True)
     ctllr_thread.start()
     return True
 
 
 def register_drones() -> None:
-    CONTROLLER_QUEUE.put(MSG_STR_E.CONTROLLER_ENABLE_REGISTRATION) 
+    CONTROLLER_QUEUE.put(MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]) 
 
     # Wait for drones to register
     num_drones_registered = CONTROLLER_QUEUE.get(block=True, timeout=REGISTRATION_TIMEOUT)

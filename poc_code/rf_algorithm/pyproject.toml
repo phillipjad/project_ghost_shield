@@ -31,7 +31,7 @@ select = [
 ]
 
 ignore= [
-    "E501" # Line too long. Let ruff format handle
+    "E501", # Line too long. Let ruff format handle
 ]
 
 [tool.uv.sources]

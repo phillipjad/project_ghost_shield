@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from queue import Queue
 import socket
 import struct
@@ -37,7 +38,7 @@ class MulticastClient:
                 if not events:
                     continue
                 for key, _ in events:
-                    callback = key.data
+                    callback: Callable[[socket.socket, Queue], None] = key.data
                     callback(key.fileobj, queue)
         except Exception as e:
             print(f'Exception encountered while listening.\n{e}', flush=True)

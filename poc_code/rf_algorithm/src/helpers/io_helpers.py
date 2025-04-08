@@ -20,7 +20,12 @@ def load_config(path: str) -> dict[str, str | int | dict]:
 def load_system_config(
     path: str,
 ) -> tuple[
-    MulticastConfig, ControllerConfig, DronesConfig, SensorsConfig, SystemConfig, FieldConfig
+    MulticastConfig,
+    ControllerConfig,
+    DronesConfig,
+    SensorsConfig,
+    SystemConfig,
+    FieldConfig,
 ]:
     sys_con: SysConfig = load_config(path)
     return (
@@ -29,5 +34,5 @@ def load_system_config(
         sys_con["drones"],
         sys_con["sensors"],
         sys_con["system"],
-        sys_con["field"]
+        sys_con["field"],
     )

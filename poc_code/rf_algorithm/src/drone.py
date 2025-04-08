@@ -1,9 +1,10 @@
-from threading import Thread, Condition, Lock
 from queue import Queue
+from threading import Thread
 
-from utils.vector import Vector
 from mc_lib.multicast_client import MulticastClient
 from mc_lib.multicast_server import MulticastServer
+
+from utils.vector import Vector
 
 
 class Drone:
@@ -88,12 +89,13 @@ class Drone:
     def __repr__(self) -> str:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
 
-def start_drone_process(id: str, x: float, y: float, z: float):
-    d = Drone(id, x, y, z)
-    q = Queue()
 
-    listener_thread = Thread(target=d.listen, args=[q])
-    sending_thread = Thread(target=d.send, args=[q])
+def start_drone_process(id: str, x: float, y: float, z: float) -> None:
+    d = Drone(id, x, y, z)
+    listener_queue = Queue()
+    sending_queue = Queue()
+
+    listener_thread = Thread(target=d.listen, args=[listener_queue])
+    sending_thread = Thread(target=d.send, args=[sending_queue])
     listener_thread.start()
     sending_thread.start()
-        

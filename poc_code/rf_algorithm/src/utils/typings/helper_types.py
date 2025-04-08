@@ -8,11 +8,15 @@ class MulticastConfig(TypedDict):
 
 
 class ControllerConfig(TypedDict):
+    id: str
     mc_port: int
 
 
+class DroneConfigT(TypedDict):
+    id: str
+
 class DronesConfig(TypedDict):
-    num_drones: int
+    drones: list[DroneConfigT]
 
 
 class SensorsConfig(TypedDict):
@@ -24,10 +28,12 @@ class SystemConfig(TypedDict):
     timeout_s: int
     signing_key: str
 
+
 class FieldConfig(TypedDict):
     x: float
     y: float
     z: float
+
 
 class SysConfig(TypedDict):
     multicast: MulticastConfig
