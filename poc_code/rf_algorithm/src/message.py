@@ -1,4 +1,5 @@
 import struct
+from typing import Optional
 
 import crc32c
 from nacl.encoding import Base64Encoder
@@ -181,7 +182,7 @@ class Message:
         return Message(header, payload)
 
     @staticmethod
-    def parse_msg(msg: SignedMessage) -> "Message" | None:
+    def parse_msg(msg: SignedMessage) -> Optional["Message"]:
         parse_function_map = {
             MSG_STR_INT_MAP[MSG_STR_E.CURRENT_LOCATION]: Message.curr_loc,
             MSG_STR_INT_MAP[MSG_STR_E.MOVE_LOCATION]: Message.move_loc,

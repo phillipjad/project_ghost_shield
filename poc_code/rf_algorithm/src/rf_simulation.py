@@ -8,7 +8,7 @@ from controller import start_controller_thread
 from drone import start_drone_process
 from field import Field
 from helpers.io_helpers import load_system_config
-from poc_code.rf_algorithm.src.constants.path_constants import SYSTEM_CONFIG_PATH
+from constants.path_constants import SYSTEM_CONFIG_PATH
 from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
@@ -22,13 +22,12 @@ SYS_GRAPH: DroneGraph = DroneGraph(
 )
 
 # System Config
-(MULTICAST_CONFIG, CONTROLLER_CONFIG, DRONES_CONFIG, SENSORS_CONFIG, SYSTEM_CONFIG) = (
+(MULTICAST_CONFIG, CONTROLLER_CONFIG, DRONES_CONFIG, SENSORS_CONFIG, SYSTEM_CONFIG, FIELD_CONFIG) = (
     load_system_config(SYSTEM_CONFIG_PATH)
 )
 
 get_location: callable = None
-DRONE_LIST = DRONES_CONFIG["drones"]
-REGISTRATION_TIMEOUT = SYSTEM_CONFIG["timeout"]
+REGISTRATION_TIMEOUT = SYSTEM_CONFIG["timeout_s"]
 CONTROLLER_QUEUE = Queue()
 
 def register_controller() -> None:
@@ -119,9 +118,9 @@ def update_egress_edges(node_id: int) -> None:
 
 
 def main(release: bool) -> None:
-    global SYS_GRAPH, NUM_EXPECTED_DRONES
+    global SYS_GRAPH
 
-    for i in range(NUM_EXPECTED_DRONES):
+    for i in range(len(DRONES_CONFIG)):
         mp.Process(target=start_drone_process, args=[i, 0, 0, 0]).start() if not release else mp.Process(target=start_drone_process, args=[i, 0, 0, 0]).start()
 
     if not register_controller():

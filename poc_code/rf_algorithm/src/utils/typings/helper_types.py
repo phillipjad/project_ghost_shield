@@ -1,4 +1,4 @@
-from typing import Literal, TypedDict
+from typing import Literal, TypeAlias, TypedDict
 
 
 class MulticastConfig(TypedDict):
@@ -15,8 +15,7 @@ class ControllerConfig(TypedDict):
 class DroneConfigT(TypedDict):
     id: str
 
-class DronesConfig(TypedDict):
-    drones: list[DroneConfigT]
+DronesConfig: TypeAlias = list[DroneConfigT]
 
 
 class SensorsConfig(TypedDict):
