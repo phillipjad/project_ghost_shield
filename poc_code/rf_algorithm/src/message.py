@@ -9,6 +9,8 @@ from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
 from constants.proj_constants import HEADER_SIZE_BYTES
 from message_objects.current_location import CurrentLocation
 from message_objects.move_location import MoveLocation
+from message_objects.enable_jammer import EnableJammer
+from message_objects.disable_jammer import DisableJammer
 from message_objects.msg_obj_abc import MsgObject
 from message_objects.enable_reg import EnableRegistration
 from message_objects.confirm_reg import ConfirmRegistration
@@ -71,6 +73,7 @@ class Message:
     def get_enable_jammer(d_id: str, duration: float) -> SignedMessage:
         msg_type = MSG_STR_E.ENABLE_JAMMER
 
+        payload: bytes = struct.pack('!f', duration) 
         header: bytes = Header.from_bytes(d_id, msg_type, 0).to_bytes()
         msg = struct.pack(f'!{len(header)}s')
         return Message.sign_and_crc(msg)
@@ -78,6 +81,7 @@ class Message:
     def get_disable_jammer(d_id: str, disable_delay: float) -> SignedMessage:
         msg_type = MSG_STR_E.DISABLE_JAMMER
 
+        payload: bytes = struct.pack('!f', disable_delay) 
         header: bytes = Header.from_bytes(d_id, msg_type, 0).to_bytes()
         msg = struct.pack(f'!{len(header)}s')
         return Message.sign_and_crc(msg)
@@ -128,21 +132,21 @@ class Message:
     def move_loc(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header(msg[0:HEADER_SIZE_BYTES])
-        payload = MoveLocation.deserialize(msg[HEADER_SIZE_BYTES:])
+        payload = MoveLocation = MoveLocation.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
     
     @staticmethod
     def enable_jammer(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
-        payload = EnableRegistration()
+        payload = EnableJammer = EnableJammer.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
     
     @staticmethod
     def disable_jammer(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
-        payload = EnableRegistration()
+        payload = DisableJammer = DisableJammer.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
 
     @staticmethod
