@@ -45,6 +45,7 @@ class Enviroment_Manager:
         def update_function():
             for drone in self.drones:
                 drone.update(time.dt)
+            self.environment.update()
         updater.update = update_function
 
         # Don't forget to actually run the app!

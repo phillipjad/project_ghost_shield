@@ -50,7 +50,14 @@ class Environment:
         self.camera_text = Text(text="Camera: First Person (E for Editor Camera)",
                                 position=(0, -0.45), origin=(0, 0))
 
+        self.coords_text = Text(
+            text="Coords: (0, 0, 0)",
+            scale=1.2,
+            origin=(-1, -1),
+        )
+
         return self.entities
+
 
     def toggle_camera(self):
         """Switch between first person and editor camera"""
@@ -58,9 +65,16 @@ class Environment:
             # Switch to editor camera
             self.camera_mode = 'editor'
             self.player.enabled = False
+
+            # Set the editor camera position before enabling it
+            self.editor_camera.position = Vec3(1, 6, 22)
             self.editor_camera.enabled = True
+
+            # Make the editor camera look at the center of the terrain
+            # This needs to happen after enabling the camera
+            self.editor_camera.smoothing_helper.look_at(Vec3(0, -2, -50))
+
             self.camera_text.text = "Camera: Editor Camera (Q for First Person)"
-            print("looking at: ",self.editor_camera.look_at)
         else:
             # Switch to first person
             self.camera_mode = 'first_person'
@@ -68,11 +82,10 @@ class Environment:
             self.editor_camera.enabled = False
             self.camera_text.text = "Camera: First Person (E for Editor Camera)"
 
-
     def get_boundary(self):
         """
         Returns the complete 3D boundary limits of the terrain.
-        
+
         Returns:
             dict: Dictionary with keys 'x', 'y', 'z', each containing a (min, max) tuple
         """
@@ -92,3 +105,11 @@ class Environment:
             'y': (min_y, max_y),
             'z': (min_z, max_z)
         }
+
+    def update(self):
+        if self.camera_mode == 'first_person':
+            pos = self.player.position
+        else:
+            pos = self.editor_camera.position
+
+        self.coords_text.text = f"Coords: ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})"

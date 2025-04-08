@@ -12,7 +12,7 @@ class GUIDrone:
             texture='white',
             position=self.starter_position,
             scale=self.scale,
-            color=self.color
+            color=self.colorz
         )
 
         # Movement parameters
