@@ -132,21 +132,21 @@ class Message:
     def move_loc(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header(msg[0:HEADER_SIZE_BYTES])
-        payload = MoveLocation = MoveLocation.deserialize(msg[HEADER_SIZE_BYTES:])
+        payload: MoveLocation = MoveLocation.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
     
     @staticmethod
     def enable_jammer(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
-        payload = EnableJammer = EnableJammer.deserialize(msg[HEADER_SIZE_BYTES:])
+        payload: EnableJammer = EnableJammer.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
     
     @staticmethod
     def disable_jammer(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
-        payload = DisableJammer = DisableJammer.deserialize(msg[HEADER_SIZE_BYTES:])
+        payload: DisableJammer = DisableJammer.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
 
     @staticmethod
