@@ -8,6 +8,7 @@ from constants.path_constants import SYSTEM_CONFIG_PATH
 from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
 from constants.proj_constants import HEADER_SIZE_BYTES
 from message_objects.current_location import CurrentLocation
+from message_objects.move_location import MoveLocation
 from message_objects.msg_obj_abc import MsgObject
 from message_objects.enable_reg import EnableRegistration
 from message_objects.confirm_reg import ConfirmRegistration
@@ -56,6 +57,30 @@ class Message:
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
         msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
         return Message.sign_and_crc(msg)
+    
+    @staticmethod
+    def get_move_location(d_id: str, x: float, y: float, z: float) -> SignedMessage:
+        msg_type = MSG_STR_E.MOVE_LOCATION
+        
+        payload: bytes = struct.pack('!fff', x, y, z) 
+        header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
+        msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
+        return Message.sign_and_crc(msg)
+    
+    @staticmethod
+    def get_enable_jammer(d_id: str, duration: float) -> SignedMessage:
+        msg_type = MSG_STR_E.ENABLE_JAMMER
+
+        header: bytes = Header.from_bytes(d_id, msg_type, 0).to_bytes()
+        msg = struct.pack(f'!{len(header)}s')
+        return Message.sign_and_crc(msg)
+    
+    def get_disable_jammer(d_id: str, disable_delay: float) -> SignedMessage:
+        msg_type = MSG_STR_E.DISABLE_JAMMER
+
+        header: bytes = Header.from_bytes(d_id, msg_type, 0).to_bytes()
+        msg = struct.pack(f'!{len(header)}s')
+        return Message.sign_and_crc(msg)
 
     @staticmethod
     def get_enable_registration(d_id: str) -> SignedMessage:
@@ -71,15 +96,6 @@ class Message:
 
         header: bytes = Header.from_bytes(d_id, msg_type, 0).to_bytes()
         msg = struct.pack(f'!{len(header)}s')
-        return Message.sign_and_crc(msg)
-    
-    @staticmethod
-    def get_move_location(d_id: str, x: float, y: float, z: float) -> SignedMessage:
-        msg_type = MSG_STR_E.DRONE_MOVE_LOCATION
-        
-        payload: bytes = struct.pack('!fff', x, y, z) 
-        header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
-        msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
         return Message.sign_and_crc(msg)
     
     @staticmethod
@@ -107,6 +123,27 @@ class Message:
         header: Header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload: CurrentLocation = CurrentLocation.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
+    
+    @staticmethod
+    def move_loc(msg: SignedMessage) -> "Message":
+        msg = Message.check_crc_and_signature(msg)
+        header = Header(msg[0:HEADER_SIZE_BYTES])
+        payload = MoveLocation.deserialize(msg[HEADER_SIZE_BYTES:])
+        return Message(header, payload)
+    
+    @staticmethod
+    def enable_jammer(msg: SignedMessage) -> "Message":
+        msg = Message.check_crc_and_signature(msg)
+        header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
+        payload = EnableRegistration()
+        return Message(header, payload)
+    
+    @staticmethod
+    def disable_jammer(msg: SignedMessage) -> "Message":
+        msg = Message.check_crc_and_signature(msg)
+        header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
+        payload = EnableRegistration()
+        return Message(header, payload)
 
     @staticmethod
     def enable_registration(msg: SignedMessage) -> "Message":
@@ -120,13 +157,6 @@ class Message:
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload = ConfirmRegistration.deserialize(msg[HEADER_SIZE_BYTES:])
-        return Message(header, payload)
-    
-    @staticmethod
-    def move_loc(msg: SignedMessage) -> "Message":
-        msg = Message.check_crc_and_signature(msg)
-        header = Header(msg[0:HEADER_SIZE_BYTES])
-        payload = MoveLocation.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
     
     @staticmethod
