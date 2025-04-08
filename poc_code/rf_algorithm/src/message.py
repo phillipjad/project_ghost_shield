@@ -40,6 +40,12 @@ class Message:
         msg = struct.pack(f'!I{len(msg)}s', crc, msg)
         return Message.signing_key.sign(msg, encoder=Base64Encoder)
 
+    # Message helper functions
+    @staticmethod
+    def get_msg_type(msg: SignedMessage) -> int:
+        # Offset=72 to skip the signature, crc, and source id bytes.
+        return struct.unpack_from(f'!B', msg, offset=72)[0]
+
 
     # Serializing methods
     @staticmethod
@@ -51,6 +57,7 @@ class Message:
         msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
         return Message.sign_and_crc(msg)
 
+    @staticmethod
     def get_enable_registration(d_id: str) -> SignedMessage:
         msg_type = MSG_STR_E.CONTROLLER_ENABLE_REGISTRATION
 
@@ -58,6 +65,7 @@ class Message:
         msg = struct.pack(f'!{len(header)}s')
         return Message.sign_and_crc(msg)
 
+    @staticmethod
     def get_confirm_registration(d_id: str) -> SignedMessage:
         msg_type = MSG_STR_E.DRONE_CONFIRM_REGISTRATION
 
@@ -65,6 +73,7 @@ class Message:
         msg = struct.pack(f'!{len(header)}s')
         return Message.sign_and_crc(msg)
     
+    @staticmethod
     def get_move_location(d_id: str, x: float, y: float, z: float) -> SignedMessage:
         msg_type = MSG_STR_E.DRONE_MOVE_LOCATION
         
@@ -73,6 +82,7 @@ class Message:
         msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
         return Message.sign_and_crc(msg)
     
+    @staticmethod
     def get_enable_rf_deception(d_id: str, duration: float) -> SignedMessage:
         msg_type = MSG_STR_E.DRONE_ENABLE_RF_DECEPTION
 
@@ -81,6 +91,7 @@ class Message:
         msg = struct.pack(f'!{len(header)}s{len(payload)}s', header, payload)
         return Message.sign_and_crc(msg)
 
+    @staticmethod
     def get_disable_rf_deception(d_id: str, delay: float) -> SignedMessage:
         msg_type = MSG_STR_E.DRONE_DISABLE_RF_DECEPTION
 
@@ -90,41 +101,67 @@ class Message:
         return Message.sign_and_crc(msg)
 
     # Deserializing methods
+    @staticmethod
     def curr_loc(msg: SignedMessage) -> "Message":
         msg: bytes = Message.check_crc_and_signature(msg)
         header: Header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload: CurrentLocation = CurrentLocation.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
 
+    @staticmethod
     def enable_registration(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload = EnableRegistration()
         return Message(header, payload)
 
+    @staticmethod
     def confirm_registration(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload = ConfirmRegistration.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
     
+    @staticmethod
     def move_loc(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header(msg[0:HEADER_SIZE_BYTES])
         payload = MoveLocation.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
     
+    @staticmethod
     def enable_rf_deception(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload = EnableRFDeception.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
     
+    @staticmethod
     def disable_rf_deception(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload = DisableRFDeception.deserialize(msg[HEADER_SIZE_BYTES:])
         return Message(header, payload)
+
+    @staticmethod
+    def parse_msg(msg: SignedMessage) -> "Message" | None:
+        parse_function_map = {
+            MSG_STR_INT_MAP[MSG_STR_E.CURRENT_LOCATION]: Message.curr_loc,
+            MSG_STR_INT_MAP[MSG_STR_E.MOVE_LOCATION]: Message.move_loc,
+            MSG_STR_INT_MAP[MSG_STR_E.ENABLE_JAMMER]: None,
+            MSG_STR_INT_MAP[MSG_STR_E.DISABLE_JAMMER]: None,
+            MSG_STR_INT_MAP[MSG_STR_E.ENABLE_RF_DECEPTION]: Message.enable_rf_deception,
+            MSG_STR_INT_MAP[MSG_STR_E.DISABLE_RF_DECEPTION]: Message.disable_rf_deception,
+            MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]: Message.enable_registration,
+            MSG_STR_INT_MAP[MSG_STR_E.CONFIRM_REGISTRATION]: Message.confirm_registration,
+        }
+
+        try:
+            msg_type = Message.get_msg_type(msg)
+            return parse_function_map[msg_type](msg)
+        except AttributeError:
+            return None
+
 
     
     
