@@ -1,0 +1,22 @@
+version = 1
+requires-python = ">=3.11"
+
+[[package]]
+name = "module-wifi"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "pywifi" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pywifi", specifier = ">=1.1.12" }]
+
+[[package]]
+name = "pywifi"
+version = "1.1.12"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b4/83/af4c284db4a9c87af92525f1d755426e9dc04aef80be8c54b0ae6628105d/pywifi-1.1.12.tar.gz", hash = "sha256:6da15de5d573635a461a95919920788b6f61748e1bd93a5e3504f456cf2e8bcc", size = 13071 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/89/55/170a52685eeefeab36bfaf26bdca629263a0a28efffc3b556b2cc86ab966/pywifi-1.1.12-py3-none-any.whl", hash = "sha256:d1b79d9ff054eef1aca4ab97f2641650d001d6740bfa7666a7d9506bcfb8459b", size = 15693 },
+]
