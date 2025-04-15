@@ -1,20 +1,17 @@
-import os
-import requests
-from math import cos, sin, radians
-from dotenv import load_dotenv
+import geocoder
+from math import radians, cos, sin
 
-# Load API key from .env
-load_dotenv()
-API_KEY = os.getenv("GOOGLE_API_KEY")
-
-def get_location(wifi_data):
-    url = f"https://www.googleapis.com/geolocation/v1/geolocate?key={API_KEY}"
-    response = requests.post(url, json={"wifiAccessPoints": wifi_data})
-    response.raise_for_status()
-    return response.json()
+def get_latlon_from_ip():
+    """Gets approximate lat/lon using your public IP (no API key needed)."""
+    g = geocoder.ip('me')
+    if g.ok:
+        return g.latlng  # returns [lat, lon]
+    else:
+        raise Exception("Failed to get geolocation from IP.")
 
 def latlon_to_xyz(lat, lon, alt=0):
-    R = 6371000 + alt
+    """Convert lat/lon/alt to Cartesian X, Y, Z coordinates (in meters)."""
+    R = 6371000 + alt  # Earth's radius + optional altitude
     lat_rad = radians(lat)
     lon_rad = radians(lon)
     x = R * cos(lat_rad) * cos(lon_rad)
@@ -22,14 +19,13 @@ def latlon_to_xyz(lat, lon, alt=0):
     z = R * sin(lat_rad)
     return x, y, z
 
-# Example usage
+def get_xyz_from_ip():
+    latlon = get_latlon_from_ip()
+    lat, lon = latlon
+    return latlon_to_xyz(lat, lon)
+
 if __name__ == "__main__":
-    wifi_data = [
-        {"macAddress": "00:25:9c:cf:1c:ac", "signalStrength": -43},
-        {"macAddress": "00:25:9c:cf:1c:ad", "signalStrength": -55}
-    ]
-    result = get_location(wifi_data)
-    lat = result['location']['lat']
-    lon = result['location']['lng']
-    print("Lat, Lon:", lat, lon)
-    print("XYZ:", latlon_to_xyz(lat, lon))
+    lat, lon = get_latlon_from_ip()
+    x, y, z = get_xyz_from_ip()
+    print(f"Latitude: {lat}, Longitude: {lon}")
+    print(f"XYZ Coordinates: x={x:.2f}, y={y:.2f}, z={z:.2f}")
