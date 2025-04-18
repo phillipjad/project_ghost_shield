@@ -3,9 +3,12 @@ from threading import Thread
 
 from mc_lib.multicast_client import MulticastClient
 from mc_lib.multicast_server import MulticastServer
+from message import Message
+from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
 
 from utils.vector import Vector
 
+DRN_QUEUE: Queue = Queue()
 
 class Drone:
     """Class representing a rudimentary drone. Capable of moving and broadcasting location"""
@@ -17,8 +20,8 @@ class Drone:
         self.x = x_coordinate
         self.y = y_coordinate
         self.z = z_coordinate
-        self.mcast_send_sock = MulticastClient(port=50000)  # Depends on backlog item
-        self.mcast_rec_sock = MulticastServer(port=50001)  # Depends on backlog item
+        self.mcast_send_sock = MulticastServer(port=50000)  # Depends on backlog item
+        self.mcast_rec_sock = MulticastClient(port=50001)  # Depends on backlog item
 
     def move_x(self, distance: float) -> None:
         self.x += distance
@@ -70,10 +73,23 @@ class Drone:
         return self.id
 
     def listen(self, msg_queue: Queue) -> None:
-        raise NotImplementedError
+        self.mcast_rec_sock.listen(msg_queue)
 
-    def send(self, msg_queue: Queue) -> None:
-        raise NotImplementedError
+    def process(self, msg_queue: Queue) -> None:
+        while (msg := msg_queue.get()) is not None:
+            if (Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.CONFIRM_REGISTRATION]):
+                print("YAYAYYAYYYAYAYAYAYYAYAY")
+
+    def main_thread_runner(self) -> None:
+        """Main thread activity
+        """
+        # Blocks on .get()
+        while (msg_type := .get()) is not None:
+            # Currently architecting to be msg_type: str and args as list[<arg_types>]
+            msg_type, args = msg_type
+            if msg_type in MSG_STR_INT_MAP:
+                msg = Message.serialize_msg(msg_type, args)
+                self.mcast_send_sock.send_message(msg)
 
     def pretty_print(self) -> str:
         return f"Drone {self.id}"

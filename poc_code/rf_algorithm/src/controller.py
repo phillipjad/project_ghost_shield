@@ -69,14 +69,18 @@ class Controller:
         while (msg := msg_queue.get()) is not None:
             if (Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.CONFIRM_REGISTRATION]):
                 print("YAYAYYAYYYAYAYAYAYYAYAY")
-            
+
     def main_thread_runner(self) -> None:
+        """Main thread activity 
+        """
         global CTRL_QUEUE
 
         # Blocks on .get()
         while (msg_type := CTRL_QUEUE.get()) is not None:
+            # Currently architecting to be msg_type: str and args as list[<arg_types>]
+            msg_type, args = msg_type
             if msg_type in MSG_STR_INT_MAP:
-                msg= Message.get_enable_registration(self.id)
+                msg = Message.serialize_msg(msg_type, args)
                 self.mcast_send_sock.send_message(msg)
 
 

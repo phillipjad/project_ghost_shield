@@ -182,8 +182,8 @@ class Message:
         return Message(header, payload)
 
     @staticmethod
-    def parse_msg(msg: SignedMessage) -> Optional["Message"]:
-        parse_function_map = {
+    def deserialize_msg(msg: SignedMessage) -> Optional["Message"]:
+        deserialize_function_map: dict[int, callable] = {
             MSG_STR_INT_MAP[MSG_STR_E.CURRENT_LOCATION]: Message.curr_loc,
             MSG_STR_INT_MAP[MSG_STR_E.MOVE_LOCATION]: Message.move_loc,
             MSG_STR_INT_MAP[MSG_STR_E.ENABLE_JAMMER]: Message.enable_jammer,
@@ -200,6 +200,24 @@ class Message:
 
         try:
             msg_type = Message.get_msg_type(msg)
-            return parse_function_map[msg_type](msg)
+            return deserialize_function_map[msg_type](msg)
+        except AttributeError:
+            return None
+
+    @staticmethod
+    def serialize_msg(msg_type: str, msg_type_args: list[any]):
+        serialize_function_map: dict[str, callable] = {
+            MSG_STR_E.CURRENT_LOCATION: Message.get_curr_loc_msg,
+            MSG_STR_E.MOVE_LOCATION: Message.get_move_location,
+            MSG_STR_E.ENABLE_JAMMER: Message.get_enable_jammer,
+            MSG_STR_E.DISABLE_JAMMER: Message.get_disable_jammer,
+            MSG_STR_E.ENABLE_RF_DECEPTION: Message.get_enable_rf_deception,
+            MSG_STR_E.DISABLE_RF_DECEPTION: Message.get_disable_rf_deception,
+            MSG_STR_E.ENABLE_REGISTRATION: Message.get_enable_registration,
+            MSG_STR_E.CONFIRM_REGISTRATION: Message.get_confirm_registration,
+        }
+
+        try:
+            return serialize_function_map[msg_type](*msg_type_args)
         except AttributeError:
             return None
