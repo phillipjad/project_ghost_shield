@@ -40,27 +40,7 @@ class Controller:
         return prev_len < len(self.registered_drone_ids)
 
     def get_num_registered_drones(self) -> int:
-        return len(self.register_drone_ids)
-
-    def send_registration_message(self) -> None:
-        """Used to broadcast message over multicast alerting drones they can register.
-
-        Raises:
-            NotImplementedError: _description_
-        """
-        reg_msg: bytes = (
-            Message.process(MSG_STR_E.ENABLE_REGISTRATION) if False else b"REGISTRATION"
-        )
-        self.mcast_send_sock.send_message(reg_msg)
-
-    def receive_registration_message(self) -> None:
-        """Used to receive registration messages.
-
-        Raises:
-            NotImplementedError: _description_
-        """
-
-        raise NotImplementedError
+        return len(self.registered_drone_ids)
 
     def listen(self, msg_queue: Queue) -> None:
         self.mcast_rec_sock.listen(msg_queue)
