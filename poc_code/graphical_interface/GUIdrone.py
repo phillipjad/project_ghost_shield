@@ -1,5 +1,6 @@
 from ursina import *
 
+
 class GUIDrone:
     def __init__(self, starter_position, model_path='models/drone.glb', color=color.white, scale=0.5):
         # Basic properties
@@ -7,13 +8,25 @@ class GUIDrone:
         self.color = color
         self.starter_position = starter_position
         self.scale = scale
+
+        # Start on ground - ground surface varies with terrain
+        # Use x,z from starter_position, but place on ground level
+        ground_position = Vec3(starter_position[0], 0, starter_position[2])
+
         self.drone_entity = Entity(
             model=self.model_path,
             texture='white',
-            position=self.starter_position,
+            position=ground_position,  # Initial position on ground
             scale=self.scale,
-            color=self.colorz
+            color=self.color
         )
+
+        # Place drone on ground surface using ray casting
+        hit_info = raycast(self.drone_entity.position +
+                           Vec3(0, 100, 0), Vec3(0, -1, 0), distance=200)
+        if hit_info.hit:
+            # Set y position to actual ground height
+            self.drone_entity.y = hit_info.world_point.y
 
         # Movement parameters
         self.target_position = None
@@ -22,9 +35,25 @@ class GUIDrone:
         self.is_moving = False
         self.velocity = Vec3(0, 0, 0)
 
+        # Takeoff parameters
+        self.took_off = False
+        self.takeoff_timer = 0
+        self.takeoff_delay = 5  # Wait 2 seconds before taking off
+
     def update(self, dt):
         """Update drone movement each frame"""
-        if not self.drone_entity or not self.is_moving:
+        if not self.drone_entity:
+            return
+
+        # Handle initial waiting period and takeoff
+        if not self.took_off:
+            self.takeoff_timer += dt
+            if self.takeoff_timer >= self.takeoff_delay and not self.is_moving:
+                self.move_to(self.starter_position)
+                self.took_off = True
+            return
+
+        if not self.is_moving:
             return
 
         # Calculate vector to target

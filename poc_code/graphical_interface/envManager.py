@@ -28,15 +28,15 @@ class Enviroment_Manager:
             starter_position=(1, 5, 1),
         ))
 
-        # Move after 2 seconds
-        invoke(lambda: self.drones[0].move_to((5, 5, 5)), delay=2)
-        # Move again after 5 seconds
-        invoke(lambda: self.drones[0].move_to((-5, 8, -5)), delay=5)
-        # And return to start after 8 seconds
-        invoke(lambda: self.drones[0].move_to((1, 5, 1)), delay=8)
+        # Add delay to allow for initial takeoff
+        # Move after 4 seconds (extra time to see initial takeoff)
+        invoke(lambda: self.drones[0].move_to((5, 5, 5)), delay=4)
+        # Move again after 7 seconds
+        invoke(lambda: self.drones[0].move_to((-5, 8, -5)), delay=7)
+        # And return to start after 10 seconds
+        invoke(lambda: self.drones[0].move_to((1, 5, 1)), delay=10)
 
         print("boundary:", self.environment.get_boundary())
-
 
     def run(self):
         # Create an update entity that will run every frame
