@@ -58,7 +58,6 @@ class Environment:
 
         return self.entities
 
-
     def toggle_camera(self):
         """Switch between first person and editor camera"""
         if self.camera_mode == 'first_person':
@@ -78,8 +77,15 @@ class Environment:
         else:
             # Switch to first person
             self.camera_mode = 'first_person'
-            self.player.enabled = True
             self.editor_camera.enabled = False
+
+            # Reset player state completely before enabling
+            self.player.enabled = True
+            self.player.mouse_sensitivity = Vec2(40, 40)
+
+            # Make sure mouse control is restored
+            mouse.locked = True
+
             self.camera_text.text = "Camera: First Person (E for Editor Camera)"
 
     def get_boundary(self):

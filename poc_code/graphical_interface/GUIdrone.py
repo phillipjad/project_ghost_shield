@@ -51,7 +51,10 @@ class GUIDrone:
             if self.takeoff_timer >= self.takeoff_delay and not self.is_moving:
                 self.move_to(self.starter_position)
                 self.took_off = True
-            return
+            if self.is_moving:  # Still process movement if an external command set it
+                pass  # Continue to movement logic below
+            else:
+                return  # Only return if we're not moving
 
         if not self.is_moving:
             return
