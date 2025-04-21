@@ -1,12 +1,12 @@
 [project]
-name = "module-wifi"
+name = "module-gps"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "dotenv>=0.9.9",
-    "geocoder>=1.38.1",
-    "pywifi>=1.1.12",
-    "requests>=2.32.3",
+    "pynmea2>=1.19.0",
+    "pyproj>=3.7.1",
+    "pyserial>=3.5",
+    "serial>=0.0.97",
 ]
