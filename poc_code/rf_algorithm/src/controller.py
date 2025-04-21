@@ -6,7 +6,7 @@ from mc_lib.multicast_client import MulticastClient
 from mc_lib.multicast_server import MulticastServer
 from nacl.signing import SignedMessage
 
-from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
+from constants.messaging_constants import MSG_INT_STR_MAP, MSG_STR_E, MSG_STR_INT_MAP
 from utils.vector import Vector
 from message import Message
 
@@ -47,6 +47,9 @@ class Controller:
 
     def process(self, msg_queue: Queue) -> None:
         while (msg := msg_queue.get()) is not None:
+            if (msg == b'ERROR'):
+                print(f'ERROR ENCOUNTERED!')
+                continue
             if (Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.CONFIRM_REGISTRATION]):
                 print("YAYAYYAYYYAYAYAYAYYAYAY")
 
@@ -59,13 +62,13 @@ class Controller:
         while (msg_type := CTRL_QUEUE.get()) is not None:
             # Currently architecting to be msg_type: str and args as list[<arg_types>]
             msg_type, args = msg_type
-            if msg_type in MSG_STR_INT_MAP:
+            if msg_type in MSG_INT_STR_MAP:
                 msg = Message.serialize_msg(msg_type, args)
                 self.mcast_send_sock.send_message(msg)
 
 
 def start_controller_thread(
-    controller_id: str, x: float, y: float, z: float, controller_queue: Queue
+    controller_id: str, controller_queue: Queue, x: float, y: float, z: float
 ) -> None:
     global CTRL_QUEUE
 

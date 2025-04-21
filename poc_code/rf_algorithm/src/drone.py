@@ -88,7 +88,7 @@ class Drone:
         """Main thread activity
         """
         # Blocks on .get()
-        while (msg_type := .get()) is not None:
+        while (msg_type := DRN_QUEUE.get()) is not None:
             # Currently architecting to be msg_type: str and args as list[<arg_types>]
             msg_type, args = msg_type
             if msg_type in MSG_STR_INT_MAP:
@@ -108,14 +108,6 @@ class Drone:
 
     def __repr__(self) -> str:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
-
-    def main_thread_runner(self) -> None:
-        global DRN_QUEUE
-
-        while (msg_type := DRN_QUEUE.get()) is not None:
-            if msg_type in MSG_STR_INT_MAP:
-                msg = Message
-
 def start_drone_process(id: str, x: float, y: float, z: float) -> None:
     global DRN_QUEUE
 

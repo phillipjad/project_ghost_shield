@@ -34,7 +34,7 @@ class Message:
     # CRC and signature
     @staticmethod
     def check_crc_and_signature(msg: SignedMessage) -> bytes | None:
-        unsigned_msg = Message.signing_key.verify_key.verify(msg, encoder=Base64Encoder)
+        unsigned_msg = Message.signing_key.verify_key.verify(msg)
         crc = struct.unpack_from("I", unsigned_msg, 0)
         reconstructed_crc = crc32c.crc32c(unsigned_msg[4:])
         if crc == reconstructed_crc:
@@ -45,7 +45,7 @@ class Message:
     def sign_and_crc(msg: bytes) -> SignedMessage:
         crc = crc32c.crc32c(msg)
         msg = struct.pack(f"!I{len(msg)}s", crc, msg)
-        return Message.signing_key.sign(msg, encoder=Base64Encoder)
+        return Message.signing_key.sign(msg)
 
     # Message helper functions
     @staticmethod
@@ -56,7 +56,7 @@ class Message:
     # Serializing methods
     @staticmethod
     def get_curr_loc_msg(d_id: str, x: float, y: float, z: float) -> SignedMessage:
-        msg_type = MSG_STR_E.CURRENT_LOCATION
+        msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.CURRENT_LOCATION)
 
         payload: bytes = struct.pack("!fff", x, y, z)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
@@ -65,7 +65,7 @@ class Message:
 
     @staticmethod
     def get_move_location(d_id: str, x: float, y: float, z: float) -> SignedMessage:
-        msg_type = MSG_STR_E.MOVE_LOCATION
+        msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.MOVE_LOCATION)
 
         payload: bytes = struct.pack("!fff", x, y, z)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
@@ -74,7 +74,7 @@ class Message:
 
     @staticmethod
     def get_enable_jammer(d_id: str, duration: float) -> SignedMessage:
-        msg_type = MSG_STR_E.ENABLE_JAMMER
+        msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_JAMMER)
 
         payload: bytes = struct.pack("!f", duration)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
@@ -83,7 +83,7 @@ class Message:
 
     @staticmethod
     def get_disable_jammer(d_id: str, disable_delay: float) -> SignedMessage:
-        msg_type = MSG_STR_E.DISABLE_JAMMER
+        msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.DISABLE_JAMMER)
 
         payload: bytes = struct.pack("!f", disable_delay)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
@@ -92,15 +92,15 @@ class Message:
 
     @staticmethod
     def get_enable_registration(d_id: str) -> SignedMessage:
-        msg_type = MSG_STR_E.ENABLE_REGISTRATION
+        msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_REGISTRATION)
 
         header: bytes = Header(d_id, msg_type, 0).to_bytes()
-        msg = struct.pack(f"!{len(header)}s")
+        msg = struct.pack(f"!{len(header)}s", header)
         return Message.sign_and_crc(msg)
 
     @staticmethod
     def get_confirm_registration(d_id: str) -> SignedMessage:
-        msg_type = MSG_STR_E.CONFIRM_REGISTRATION
+        msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION)
 
         header: bytes = Header(d_id, msg_type, 0).to_bytes()
         msg = struct.pack(f"!{len(header)}s")
@@ -108,7 +108,7 @@ class Message:
 
     @staticmethod
     def get_enable_rf_deception(d_id: str, duration: float) -> SignedMessage:
-        msg_type = MSG_STR_E.ENABLE_RF_DECEPTION
+        msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_RF_DECEPTION)
 
         payload: bytes = struct.pack("!f", duration)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
@@ -117,7 +117,7 @@ class Message:
 
     @staticmethod
     def get_disable_rf_deception(d_id: str, delay: float) -> SignedMessage:
-        msg_type = MSG_STR_E.DISABLE_RF_DECEPTION
+        msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.DISABLE_RF_DECEPTION)
 
         payload: bytes = struct.pack("!f", delay)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
@@ -207,14 +207,14 @@ class Message:
     @staticmethod
     def serialize_msg(msg_type: str, msg_type_args: list[any]):
         serialize_function_map: dict[str, callable] = {
-            MSG_STR_E.CURRENT_LOCATION: Message.get_curr_loc_msg,
-            MSG_STR_E.MOVE_LOCATION: Message.get_move_location,
-            MSG_STR_E.ENABLE_JAMMER: Message.get_enable_jammer,
-            MSG_STR_E.DISABLE_JAMMER: Message.get_disable_jammer,
-            MSG_STR_E.ENABLE_RF_DECEPTION: Message.get_enable_rf_deception,
-            MSG_STR_E.DISABLE_RF_DECEPTION: Message.get_disable_rf_deception,
-            MSG_STR_E.ENABLE_REGISTRATION: Message.get_enable_registration,
-            MSG_STR_E.CONFIRM_REGISTRATION: Message.get_confirm_registration,
+            MSG_STR_INT_MAP.get(MSG_STR_E.CURRENT_LOCATION): Message.get_curr_loc_msg,
+            MSG_STR_INT_MAP.get(MSG_STR_E.MOVE_LOCATION): Message.get_move_location,
+            MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_JAMMER): Message.get_enable_jammer,
+            MSG_STR_INT_MAP.get(MSG_STR_E.DISABLE_JAMMER): Message.get_disable_jammer,
+            MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_RF_DECEPTION): Message.get_enable_rf_deception,
+            MSG_STR_INT_MAP.get(MSG_STR_E.DISABLE_RF_DECEPTION): Message.get_disable_rf_deception,
+            MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_REGISTRATION): Message.get_enable_registration,
+            MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION): Message.get_confirm_registration,
         }
 
         try:

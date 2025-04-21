@@ -38,7 +38,7 @@ def register_controller() -> None:
 
 
 def register_drones() -> None:
-    CONTROLLER_QUEUE.put(MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]) 
+    CONTROLLER_QUEUE.put((MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_REGISTRATION), [CONTROLLER_CONFIG['id']])) 
 
     # Wait for drones to register
     num_drones_registered = CONTROLLER_QUEUE.get(block=True, timeout=REGISTRATION_TIMEOUT)
@@ -127,6 +127,7 @@ def main(release: bool) -> None:
         raise RuntimeError("Failed to register controller")
     if not register_drones():
         raise RuntimeError("Failed to register drones")
+    return
     populate_graph()
 
     drone_field = Field(10, 10, 10, DRONE_LIST)

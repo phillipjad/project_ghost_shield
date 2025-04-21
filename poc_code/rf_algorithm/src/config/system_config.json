@@ -18,7 +18,7 @@
         "unit_of_measurement": "m"
     },
     "system": {
-        "timeout_s": 10,
+        "timeout_s": 1000000,
         "private_key": "HGaIxZKzrGq8V9Cx4atMgEq5n3Sx2OHrl4KHmglhpLM=",
         "public_key": "jl1-5zvKoSnS0L8vRLhfxpkg49cR-UzH5wUuOrwBVjk="
     },
