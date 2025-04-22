@@ -10,22 +10,18 @@ from constants.messaging_constants import MSG_STR_INT_MAP
 from utils.vector import Vector
 from message import Message
 
-DRN_QUEUE: Queue
-
-DRN_QUEUE: Queue = Queue()
-
 class Drone:
     """Class representing a rudimentary drone. Capable of moving and broadcasting location"""
 
     def __init__(
-        self, id: str, x_coordinate: float, y_coordinate: float, z_coordinate: float
+        self, id: str, x_coordinate: float, y_coordinate: float, z_coordinate: float, port: int = 50001
     ) -> None:
         self.id = id
         self.x = x_coordinate
         self.y = y_coordinate
         self.z = z_coordinate
-        self.mcast_send_sock = MulticastServer(port=50000)  # Depends on backlog item
-        self.mcast_rec_sock = MulticastClient(port=50001)  # Depends on backlog item
+        self.mcast_send_sock = MulticastServer(port=port)
+        self.mcast_rec_sock = MulticastClient(port=port)
 
     def move_x(self, distance: float) -> None:
         self.x += distance
@@ -79,17 +75,21 @@ class Drone:
     def listen(self, msg_queue: Queue) -> None:
         self.mcast_rec_sock.listen(msg_queue)
 
-    def process(self, msg_queue: Queue) -> None:
+    def process(self, msg_queue: Queue, internal_msg_queue: Queue) -> None:
         while (msg := msg_queue.get()) is not None:
-            if (Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.CONFIRM_REGISTRATION]):
+            if (Message.get_source_id == self.id):
+                continue 
+            print(msg)
+            if (Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]):
+                internal_msg_queue.put((MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION), [self.id]))
                 print("YAYAYYAYYYAYAYAYAYYAYAY")
 
-    def main_thread_runner(self) -> None:
+    def main_thread_runner(self, internal_msg_queue: Queue) -> None:
         """Main thread activity
         """
         # Blocks on .get()
-        while (msg_type := DRN_QUEUE.get()) is not None:
-            # Currently architecting to be msg_type: str and args as list[<arg_types>]
+        while (msg_type := internal_msg_queue.get()) is not None:
+            print(msg_type)
             msg_type, args = msg_type
             if msg_type in MSG_STR_INT_MAP:
                 msg = Message.serialize_msg(msg_type, args)
@@ -109,16 +109,14 @@ class Drone:
     def __repr__(self) -> str:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
 def start_drone_process(id: str, x: float, y: float, z: float) -> None:
-    global DRN_QUEUE
-
     d = Drone(id, x, y, z)
     listener_queue = Queue()
     sending_queue = Queue()
-    DRN_QUEUE = Queue()
+    internal_msg_queue = Queue()
 
     listener_thread = Thread(target=d.listen, args=[listener_queue], daemon=True)
-    processing_thread = Thread(target=d.process, args=[sending_queue], daemon=True)
+    processing_thread = Thread(target=d.process, args=[sending_queue, internal_msg_queue], daemon=True)
     listener_thread.start()
     processing_thread.start()
 
-    d.main_thread_runner()
+    d.main_thread_runner(internal_msg_queue)

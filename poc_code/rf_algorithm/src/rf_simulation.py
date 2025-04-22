@@ -1,8 +1,8 @@
 import argparse
 import multiprocessing as mp
 from queue import Queue
+import signal
 from threading import Thread
-import time
 
 from controller import start_controller_thread
 from drone import start_drone_process
@@ -28,20 +28,34 @@ SYS_GRAPH: DroneGraph = DroneGraph(
 
 get_location: callable = None
 REGISTRATION_TIMEOUT = SYSTEM_CONFIG["timeout_s"]
-CONTROLLER_QUEUE = Queue()
+CONTROLLER_SEND_QUEUE = Queue()
+CONTROLLER_RECV_QUEUE = Queue()
+PROCESS_LIST: list[mp.Process] = []
 
-def register_controller() -> None:
-    current_location_xyz: list[float, float, float] = get_location() if False else (5, 5, 5)
-    ctllr_thread = Thread(target=start_controller_thread, args=[CONTROLLER_CONFIG['id'], CONTROLLER_QUEUE, *current_location_xyz], daemon=True)
-    ctllr_thread.start()
-    return True
+def sig_handler(sig, frame):
+    for p in PROCESS_LIST:
+        p.terminate()
+    for p in PROCESS_LIST:
+        p.join()
+    exit(0)
+
+def register_controller() -> bool:
+    try:
+        current_location_xyz: list[float, float, float] = get_location() if False else (5, 5, 5)
+        ctllr_thread = Thread(target=start_controller_thread, args=[CONTROLLER_CONFIG['id'], CONTROLLER_SEND_QUEUE, CONTROLLER_RECV_QUEUE, *current_location_xyz], daemon=True)
+        ctllr_thread.start()
+        return True
+    except:
+        return False
 
 
 def register_drones() -> None:
-    CONTROLLER_QUEUE.put((MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_REGISTRATION), [CONTROLLER_CONFIG['id']])) 
+    global CONTROLLER_SEND_QUEUE, CONTROLLER_RECV_QUEUE
+
+    CONTROLLER_SEND_QUEUE.put((MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_REGISTRATION), [CONTROLLER_CONFIG['id']])) 
 
     # Wait for drones to register
-    num_drones_registered = CONTROLLER_QUEUE.get(block=True, timeout=REGISTRATION_TIMEOUT)
+    num_drones_registered = CONTROLLER_RECV_QUEUE.get(block=True, timeout=REGISTRATION_TIMEOUT)
     return num_drones_registered
 
 
@@ -120,14 +134,23 @@ def update_egress_edges(node_id: int) -> None:
 def main(release: bool) -> None:
     global SYS_GRAPH
 
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
     for i in range(len(DRONES_CONFIG)):
-        mp.Process(target=start_drone_process, args=[i, 0, 0, 0]).start() if not release else mp.Process(target=start_drone_process, args=[i, 0, 0, 0]).start()
+        drone_process = mp.Process(target=start_drone_process, args=[i, 0, 0, 0]) if not release else mp.Process(target=start_drone_process, args=[i, 0, 0, 0])
+        PROCESS_LIST.append(drone_process)
+        drone_process.start()
+
+    signal.signal(signal.SIGINT, sig_handler)
+    signal.signal(signal.SIGTERM, sig_handler)
 
     if not register_controller():
         raise RuntimeError("Failed to register controller")
     if not register_drones():
         raise RuntimeError("Failed to register drones")
-    return
+    while True:
+        pass 
     populate_graph()
 
     drone_field = Field(10, 10, 10, DRONE_LIST)

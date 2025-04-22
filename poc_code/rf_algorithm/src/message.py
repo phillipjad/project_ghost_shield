@@ -53,6 +53,9 @@ class Message:
         # Offset=72 to skip the signature, crc, and source id bytes.
         return struct.unpack_from("!B", msg, offset=72)[0]
 
+    def get_source_id(msg: SignedMessage) -> str:
+        return struct.unpack_from("!4s", msg, offset=68)[0]
+
     # Serializing methods
     @staticmethod
     def get_curr_loc_msg(d_id: str, x: float, y: float, z: float) -> SignedMessage:
@@ -205,7 +208,7 @@ class Message:
             return None
 
     @staticmethod
-    def serialize_msg(msg_type: str, msg_type_args: list[any]):
+    def serialize_msg(msg_type: str, msg_type_args: list[any]) -> SignedMessage | None:
         serialize_function_map: dict[str, callable] = {
             MSG_STR_INT_MAP.get(MSG_STR_E.CURRENT_LOCATION): Message.get_curr_loc_msg,
             MSG_STR_INT_MAP.get(MSG_STR_E.MOVE_LOCATION): Message.get_move_location,
