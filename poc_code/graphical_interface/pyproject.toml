@@ -8,6 +8,7 @@ dependencies = [
     "numpy>=2.2.4",
     "physics3d",
     "ursina>=7.0.0",
+    "vec3>=0.1.0",
 ]
 
 [tool.uv.sources]

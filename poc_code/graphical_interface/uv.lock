@@ -22,6 +22,7 @@ dependencies = [
     { name = "numpy" },
     { name = "physics3d" },
     { name = "ursina" },
+    { name = "vec3" },
 ]
 
 [package.metadata]
@@ -29,6 +30,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.2.4" },
     { name = "physics3d", git = "https://github.com/LooksForFuture/Bullet-for-ursina" },
     { name = "ursina", specifier = ">=7.0.0" },
+    { name = "vec3", specifier = ">=0.1.0" },
 ]
 
 [[package]]
@@ -259,4 +261,13 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ff/13/76ff76de0839c68e58a6a927438778b98c7ca7f38dce517e359a3721498e/ursina-7.0.0.tar.gz", hash = "sha256:838970dadcd4b40d77b4d5c80ab2c99fc869d2b455de75b733b0f1f74a8874d1", size = 3034282 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/05/79/f2d8d88adc8cfc86da15ab6ac8f9f4670d5367b6bf94642ffe0ebec4d963/ursina-7.0.0-py3-none-any.whl", hash = "sha256:f80a8ee84c299b835075d37780fd4607bd20cf85f9dacc59376d9535b51bb7c3", size = 3137991 },
+]
+
+[[package]]
+name = "vec3"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/63/c5ffead76c50ccb2a41eee4897e334ead3b2f956ab0b54ba0463b8da2f62/vec3-0.1.0.tar.gz", hash = "sha256:2952ed246445572b19571162c6010142f49f143c2ac7316477751a8d7b0ef4f7", size = 3723 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/71/878c7eefbb3ccf2800b4eefd08fa36c2d5055de50c556c3e6d4e10aca6dc/vec3-0.1.0-py3-none-any.whl", hash = "sha256:ed1c71b549aa7b9ca98eb01d53db0c6a0d668321b245c33db8f8631b20eec9de", size = 3947 },
 ]
