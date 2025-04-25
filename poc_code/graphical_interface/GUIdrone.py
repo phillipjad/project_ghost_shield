@@ -147,8 +147,23 @@ class GUIDrone:
                 # Otherwise, vary around current height
                 self.physics.target_altitude = self.drone_entity.y + hover_offset
 
-    def move_to(self, position):
-        """Move drone to the specified position"""
+    def move_to(self, position, delay=0):
+        """Move drone to the specified position after optional delay
+
+        Args:
+            position: Target position as (x,y,z) tuple or Vec3
+            delay: Time in seconds to wait before executing the movement (default: 0)
+        """
+        if delay > 0:
+            # Schedule the movement using Ursina's invoke function
+            invoke(lambda: self._execute_move_to(position), delay=delay)
+            return True
+
+        # If no delay, execute immediately
+        return self._execute_move_to(position)
+
+    def _execute_move_to(self, position):
+        """Internal method that performs the actual movement logic"""
         if not self.drone_entity:
             return False
 

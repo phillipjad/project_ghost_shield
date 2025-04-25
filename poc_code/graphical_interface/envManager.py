@@ -28,13 +28,16 @@ class Enviroment_Manager:
             starter_position=(1, 5, 1),
         ))
 
-        # Add delay to allow for initial takeoff
+        # Set the active drone in the environment for coordinate display
+        self.environment.set_active_drone(self.drones[0])
+
+        # Add delay to allow for initial takeoff using the enhanced move_to function
         # Move after 4 seconds (extra time to see initial takeoff)
-        invoke(lambda: self.drones[0].move_to((5, 5, 5)), delay=4)
-        # Move again after 7 seconds
-        invoke(lambda: self.drones[0].move_to((-5, 8, -5)), delay=7)
-        # And return to start after 10 seconds
-        invoke(lambda: self.drones[0].move_to((1, 5, 1)), delay=10)
+        self.drones[0].move_to((5, 5, 5), delay=4)
+        # Move again after 7 seconds total
+        self.drones[0].move_to((-5, 8, -5), delay=7)
+        # And return to start after 10 seconds total
+        self.drones[0].move_to((1, 5, 1), delay=10)
 
         print("boundary:", self.environment.get_boundary())
 
