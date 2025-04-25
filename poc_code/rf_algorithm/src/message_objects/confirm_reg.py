@@ -11,9 +11,9 @@ class ConfirmRegistration(MsgObject):
     def deserialize(
         payload: bytes, offset: int = 0
     ) -> tuple[int, "ConfirmRegistration"]:
-        drone_id = struct.unpack_from("!4s", payload)[0]
+        drone_id = struct.unpack_from("!4s", payload)[0].decode("utf-8")
         offset += 4
         return (offset, ConfirmRegistration(drone_id))
 
     def serialize(self) -> bytes:
-        return struct.unpack("!4s", self.drone_id)
+        return struct.pack("!4s", self.drone_id)

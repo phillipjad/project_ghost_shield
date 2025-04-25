@@ -1,10 +1,11 @@
 from queue import Queue
 from threading import Thread
+import time
 
 from mc_lib.multicast_client import MulticastClient
 from mc_lib.multicast_server import MulticastServer
 from message import Message
-from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
+from constants.messaging_constants import MSG_INT_STR_MAP, MSG_STR_E, MSG_STR_INT_MAP
 
 from constants.messaging_constants import MSG_STR_INT_MAP
 from utils.vector import Vector
@@ -14,7 +15,7 @@ class Drone:
     """Class representing a rudimentary drone. Capable of moving and broadcasting location"""
 
     def __init__(
-        self, id: str, x_coordinate: float, y_coordinate: float, z_coordinate: float, port: int = 50001
+        self, id: str, x_coordinate: float, y_coordinate: float, z_coordinate: float, port: int = 50000
     ) -> None:
         self.id = id
         self.x = x_coordinate
@@ -77,21 +78,21 @@ class Drone:
 
     def process(self, msg_queue: Queue, internal_msg_queue: Queue) -> None:
         while (msg := msg_queue.get()) is not None:
-            if (Message.get_source_id == self.id):
+            if (Message.get_source_id(msg) == self.id):
                 continue 
-            print(msg)
+            if (msg.startswith(b'Error')):
+                print(f'ERROR ENCOUNTERED!')
+                continue
             if (Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]):
                 internal_msg_queue.put((MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION), [self.id]))
-                print("YAYAYYAYYYAYAYAYAYYAYAY")
 
     def main_thread_runner(self, internal_msg_queue: Queue) -> None:
         """Main thread activity
         """
         # Blocks on .get()
         while (msg_type := internal_msg_queue.get()) is not None:
-            print(msg_type)
             msg_type, args = msg_type
-            if msg_type in MSG_STR_INT_MAP:
+            if msg_type in MSG_INT_STR_MAP:
                 msg = Message.serialize_msg(msg_type, args)
                 self.mcast_send_sock.send_message(msg)
 
@@ -111,12 +112,14 @@ class Drone:
 def start_drone_process(id: str, x: float, y: float, z: float) -> None:
     d = Drone(id, x, y, z)
     listener_queue = Queue()
-    sending_queue = Queue()
     internal_msg_queue = Queue()
 
     listener_thread = Thread(target=d.listen, args=[listener_queue], daemon=True)
-    processing_thread = Thread(target=d.process, args=[sending_queue, internal_msg_queue], daemon=True)
+    processing_thread = Thread(target=d.process, args=[listener_queue, internal_msg_queue], daemon=True)
     listener_thread.start()
     processing_thread.start()
 
     d.main_thread_runner(internal_msg_queue)
+    while True:
+        print(f"Drone {id} is still alive")
+        time.sleep(5)

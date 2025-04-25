@@ -35,10 +35,11 @@ class Message:
     @staticmethod
     def check_crc_and_signature(msg: SignedMessage) -> bytes | None:
         unsigned_msg = Message.signing_key.verify_key.verify(msg)
-        crc = struct.unpack_from("I", unsigned_msg, 0)
+        crc = struct.unpack_from("!I", unsigned_msg, 0)[0]
         reconstructed_crc = crc32c.crc32c(unsigned_msg[4:])
         if crc == reconstructed_crc:
             return unsigned_msg[4:]
+
         return None
 
     @staticmethod
@@ -54,7 +55,7 @@ class Message:
         return struct.unpack_from("!B", msg, offset=72)[0]
 
     def get_source_id(msg: SignedMessage) -> str:
-        return struct.unpack_from("!4s", msg, offset=68)[0]
+        return struct.unpack_from("!4s", msg, offset=68)[0].decode("utf-8")
 
     # Serializing methods
     @staticmethod
@@ -105,8 +106,9 @@ class Message:
     def get_confirm_registration(d_id: str) -> SignedMessage:
         msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION)
 
-        header: bytes = Header(d_id, msg_type, 0).to_bytes()
-        msg = struct.pack(f"!{len(header)}s")
+        payload: bytes = struct.pack("!4s", d_id.encode())
+        header: bytes = Header(d_id, msg_type, len(d_id.encode())).to_bytes()
+        msg = struct.pack(f"!{len(header)}s{len(payload)}s", header, payload)
         return Message.sign_and_crc(msg)
 
     @staticmethod
@@ -132,56 +134,56 @@ class Message:
     def curr_loc(msg: SignedMessage) -> "Message":
         msg: bytes = Message.check_crc_and_signature(msg)
         header: Header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
-        payload: CurrentLocation = CurrentLocation.deserialize(msg[HEADER_SIZE_BYTES:])
+        payload: CurrentLocation = CurrentLocation.deserialize(msg[HEADER_SIZE_BYTES:])[1]
         return Message(header, payload)
 
     @staticmethod
     def move_loc(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header(msg[0:HEADER_SIZE_BYTES])
-        payload: MoveLocation = MoveLocation.deserialize(msg[HEADER_SIZE_BYTES:])
+        payload: MoveLocation = MoveLocation.deserialize(msg[HEADER_SIZE_BYTES:])[1]
         return Message(header, payload)
 
     @staticmethod
     def enable_jammer(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
-        payload: EnableJammer = EnableJammer.deserialize(msg[HEADER_SIZE_BYTES:])
+        payload: EnableJammer = EnableJammer.deserialize(msg[HEADER_SIZE_BYTES:])[1]
         return Message(header, payload)
 
     @staticmethod
     def disable_jammer(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
-        payload: DisableJammer = DisableJammer.deserialize(msg[HEADER_SIZE_BYTES:])
+        payload: DisableJammer = DisableJammer.deserialize(msg[HEADER_SIZE_BYTES:])[1]
         return Message(header, payload)
 
     @staticmethod
     def enable_registration(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
-        payload = EnableRegistration()
+        payload = EnableRegistration.deserialize(msg[HEADER_SIZE_BYTES:])[1]
         return Message(header, payload)
 
     @staticmethod
     def confirm_registration(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
-        payload = ConfirmRegistration.deserialize(msg[HEADER_SIZE_BYTES:])
+        payload = ConfirmRegistration.deserialize(msg[HEADER_SIZE_BYTES:])[1]
         return Message(header, payload)
 
     @staticmethod
     def enable_rf_deception(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
-        payload = EnableRFDeception.deserialize(msg[HEADER_SIZE_BYTES:])
+        payload = EnableRFDeception.deserialize(msg[HEADER_SIZE_BYTES:])[1]
         return Message(header, payload)
 
     @staticmethod
     def disable_rf_deception(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
-        payload = DisableRFDeception.deserialize(msg[HEADER_SIZE_BYTES:])
+        payload = DisableRFDeception.deserialize(msg[HEADER_SIZE_BYTES:])[1]
         return Message(header, payload)
 
     @staticmethod

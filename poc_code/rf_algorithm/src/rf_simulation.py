@@ -1,8 +1,12 @@
+#!/usr/bin/env python
+
 import argparse
 import multiprocessing as mp
 from queue import Queue
 import signal
 from threading import Thread
+from time import sleep
+import time
 
 from controller import start_controller_thread
 from drone import start_drone_process
@@ -34,12 +38,15 @@ PROCESS_LIST: list[mp.Process] = []
 
 def sig_handler(sig, frame):
     for p in PROCESS_LIST:
-        p.terminate()
+        if p.is_alive():
+            p.terminate()
     for p in PROCESS_LIST:
         p.join()
     exit(0)
 
 def register_controller() -> bool:
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
     try:
         current_location_xyz: list[float, float, float] = get_location() if False else (5, 5, 5)
         ctllr_thread = Thread(target=start_controller_thread, args=[CONTROLLER_CONFIG['id'], CONTROLLER_SEND_QUEUE, CONTROLLER_RECV_QUEUE, *current_location_xyz], daemon=True)
@@ -47,15 +54,31 @@ def register_controller() -> bool:
         return True
     except:
         return False
+    finally:
+        signal.signal(signal.SIGINT, sig_handler)
+        signal.signal(signal.SIGTERM, sig_handler)
+
+def check_drones_registered(return_list: list[int]) -> None:
+        try:
+            num_drones_registered = CONTROLLER_RECV_QUEUE.get(block=False)
+            return_list.append(num_drones_registered)
+        except Exception as e:
+            return
 
 
-def register_drones() -> None:
+def register_drones() -> int:
     global CONTROLLER_SEND_QUEUE, CONTROLLER_RECV_QUEUE
 
-    CONTROLLER_SEND_QUEUE.put((MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_REGISTRATION), [CONTROLLER_CONFIG['id']])) 
+    CONTROLLER_SEND_QUEUE.put((MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_REGISTRATION), [CONTROLLER_CONFIG['id']], REGISTRATION_TIMEOUT)) 
 
+    return_list: list[int] = []
     # Wait for drones to register
-    num_drones_registered = CONTROLLER_RECV_QUEUE.get(block=True, timeout=REGISTRATION_TIMEOUT)
+    timeout = time.time() + REGISTRATION_TIMEOUT
+    while time.time() <= timeout:
+        Thread(target=check_drones_registered, args=[return_list], daemon=True).start()
+        sleep(0.1)
+    num_drones_registered = return_list[0] if return_list else 0
+    print(f"Number of drones registered: {num_drones_registered}")
     return num_drones_registered
 
 
@@ -137,32 +160,39 @@ def main(release: bool) -> None:
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
-    for i in range(len(DRONES_CONFIG)):
-        drone_process = mp.Process(target=start_drone_process, args=[i, 0, 0, 0]) if not release else mp.Process(target=start_drone_process, args=[i, 0, 0, 0])
-        PROCESS_LIST.append(drone_process)
-        drone_process.start()
+    try:
+        for i in range(len(DRONES_CONFIG)):
+            drone_process = mp.Process(target=start_drone_process, args=[f'DRN{i}', 0, 0, 0]) if not release else mp.Process(target=start_drone_process, args=[f'DRN{i}', 0, 0, 0])
+            PROCESS_LIST.append(drone_process)
+            drone_process.start()
 
-    signal.signal(signal.SIGINT, sig_handler)
-    signal.signal(signal.SIGTERM, sig_handler)
+        signal.signal(signal.SIGINT, sig_handler)
+        signal.signal(signal.SIGTERM, sig_handler)
 
-    if not register_controller():
-        raise RuntimeError("Failed to register controller")
-    if not register_drones():
-        raise RuntimeError("Failed to register drones")
-    while True:
-        pass 
-    populate_graph()
+        if not register_controller():
+            raise RuntimeError("Failed to register controller")
+        if not register_drones():
+            raise RuntimeError("Failed to register drones")
+        while True:
+            sleep(1)
 
-    drone_field = Field(10, 10, 10, DRONE_LIST)
-    drone_field.randomly_place_drones()  # Randomly place drones in field
-    update_graph_edges()
+        populate_graph()
 
-    while not drone_field.drones_are_equidistant(SYS_GRAPH, CONTROLLER.get_location()):
-        drone_field.space_drones(SYS_GRAPH, update_egress_edges)
-        print("STILL NOT EQUIDISTANT")
-        print(SYS_GRAPH)
+        drone_field = Field(10, 10, 10, DRONE_LIST)
+        drone_field.randomly_place_drones()  # Randomly place drones in field
+        update_graph_edges()
 
-    print("EQUIDISTANT!")
+        while not drone_field.drones_are_equidistant(SYS_GRAPH, CONTROLLER.get_location()):
+            drone_field.space_drones(SYS_GRAPH, update_egress_edges)
+            print("STILL NOT EQUIDISTANT")
+            print(SYS_GRAPH)
+
+        print("EQUIDISTANT!")
+    except KeyboardInterrupt:
+        sig_handler(None, None)
+    except Exception as e:
+        print(f"Unhandled exception: {e}")
+        sig_handler(None, None)
 
 
 if __name__ == "__main__":
