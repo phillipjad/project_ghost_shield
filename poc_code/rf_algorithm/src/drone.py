@@ -80,7 +80,7 @@ class Drone:
         while (msg := msg_queue.get()) is not None:
             if (Message.get_source_id(msg) == self.id):
                 continue 
-            if (msg.startswith(b'Error')):
+            if (msg.startswith(b'ERROR')):
                 print(f'ERROR ENCOUNTERED!')
                 continue
             if (Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]):
@@ -90,8 +90,8 @@ class Drone:
         """Main thread activity
         """
         # Blocks on .get()
-        while (msg_type := internal_msg_queue.get()) is not None:
-            msg_type, args = msg_type
+        while (command := internal_msg_queue.get()) is not None:
+            msg_type, args = command 
             if msg_type in MSG_INT_STR_MAP:
                 msg = Message.serialize_msg(msg_type, args)
                 self.mcast_send_sock.send_message(msg)
@@ -109,6 +109,7 @@ class Drone:
 
     def __repr__(self) -> str:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
+
 def start_drone_process(id: str, x: float, y: float, z: float) -> None:
     d = Drone(id, x, y, z)
     listener_queue = Queue()
@@ -120,6 +121,3 @@ def start_drone_process(id: str, x: float, y: float, z: float) -> None:
     processing_thread.start()
 
     d.main_thread_runner(internal_msg_queue)
-    while True:
-        print(f"Drone {id} is still alive")
-        time.sleep(5)

@@ -2,8 +2,6 @@
 from enum import StrEnum
 from types import MappingProxyType
 
-ctrl_send_reg_msg = "C_REG_MSG"
-
 MSG_INT_STR_MAP: MappingProxyType[int, str] = {
     0x00: "RESERVED_INVALID",
     0x01: "CURRENT_LOCATION",

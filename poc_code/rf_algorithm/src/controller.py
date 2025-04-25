@@ -48,7 +48,7 @@ class Controller:
         while (msg := internal_msg_queue.get()) is not None:
             if (Message.get_source_id(msg) == self.id):
                 continue 
-            if (msg.startswith(b'Error')):
+            if (msg.startswith(b'ERROR')):
                 print(f'ERROR ENCOUNTERED!')
                 continue
             if (Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.CONFIRM_REGISTRATION]):
