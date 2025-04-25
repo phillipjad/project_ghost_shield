@@ -2,22 +2,22 @@
 
 import argparse
 import multiprocessing as mp
-from queue import Queue
 import signal
+import time
+from queue import Queue
 from threading import Thread
 from time import sleep
-import time
 
+from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
+from constants.path_constants import SYSTEM_CONFIG_PATH
 from controller import start_controller_thread
 from drone import start_drone_process
 from field import Field
 from helpers.io_helpers import load_system_config
-from constants.path_constants import SYSTEM_CONFIG_PATH
 from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
 from utils.vector import Vector
-from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
 
 # CONSTANTS
 SYS_GRAPH: DroneGraph = DroneGraph(
@@ -26,9 +26,14 @@ SYS_GRAPH: DroneGraph = DroneGraph(
 )
 
 # System Config
-(MULTICAST_CONFIG, CONTROLLER_CONFIG, DRONES_CONFIG, SENSORS_CONFIG, SYSTEM_CONFIG, FIELD_CONFIG) = (
-    load_system_config(SYSTEM_CONFIG_PATH)
-)
+(
+    MULTICAST_CONFIG,
+    CONTROLLER_CONFIG,
+    DRONES_CONFIG,
+    SENSORS_CONFIG,
+    SYSTEM_CONFIG,
+    FIELD_CONFIG,
+) = load_system_config(SYSTEM_CONFIG_PATH)
 
 get_location: callable = None
 REGISTRATION_TIMEOUT = SYSTEM_CONFIG["timeout_s"]
@@ -36,7 +41,8 @@ CONTROLLER_SEND_QUEUE = Queue()
 CONTROLLER_RECV_QUEUE = Queue()
 PROCESS_LIST: list[mp.Process] = []
 
-def sig_handler(sig, frame):
+
+def sig_handler(sig: any, frame: any) -> None:
     for p in PROCESS_LIST:
         if p.is_alive():
             p.terminate()
@@ -44,32 +50,51 @@ def sig_handler(sig, frame):
         p.join()
     exit(0)
 
+
 def register_controller() -> bool:
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     try:
-        current_location_xyz: list[float, float, float] = get_location() if False else (5, 5, 5)
-        ctllr_thread = Thread(target=start_controller_thread, args=[CONTROLLER_CONFIG['id'], CONTROLLER_SEND_QUEUE, CONTROLLER_RECV_QUEUE, *current_location_xyz], daemon=True)
+        current_location_xyz: list[float, float, float] = (
+            get_location() if False else (5, 5, 5)
+        )
+        ctllr_thread = Thread(
+            target=start_controller_thread,
+            args=[
+                CONTROLLER_CONFIG["id"],
+                CONTROLLER_SEND_QUEUE,
+                CONTROLLER_RECV_QUEUE,
+                *current_location_xyz,
+            ],
+            daemon=True,
+        )
         ctllr_thread.start()
         return True
-    except:
+    except Exception:
         return False
     finally:
         signal.signal(signal.SIGINT, sig_handler)
         signal.signal(signal.SIGTERM, sig_handler)
 
+
 def check_drones_registered(return_list: list[int]) -> None:
-        try:
-            num_drones_registered = CONTROLLER_RECV_QUEUE.get(block=False)
-            return_list.append(num_drones_registered)
-        except Exception as e:
-            return
+    try:
+        num_drones_registered = CONTROLLER_RECV_QUEUE.get(block=False)
+        return_list.append(num_drones_registered)
+    except Exception:
+        return
 
 
 def register_drones() -> int:
     global CONTROLLER_SEND_QUEUE, CONTROLLER_RECV_QUEUE
 
-    CONTROLLER_SEND_QUEUE.put((MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_REGISTRATION), [CONTROLLER_CONFIG['id']], REGISTRATION_TIMEOUT)) 
+    CONTROLLER_SEND_QUEUE.put(
+        (
+            MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_REGISTRATION),
+            [CONTROLLER_CONFIG["id"]],
+            REGISTRATION_TIMEOUT,
+        )
+    )
 
     return_list: list[int] = []
     # Wait for drones to register
@@ -162,7 +187,11 @@ def main(release: bool) -> None:
 
     try:
         for i in range(len(DRONES_CONFIG)):
-            drone_process = mp.Process(target=start_drone_process, args=[f'DRN{i}', 0, 0, 0]) if not release else mp.Process(target=start_drone_process, args=[f'DRN{i}', 0, 0, 0])
+            drone_process = (
+                mp.Process(target=start_drone_process, args=[f"DRN{i}", 0, 0, 0])
+                if not release
+                else mp.Process(target=start_drone_process, args=[f"DRN{i}", 0, 0, 0])
+            )
             PROCESS_LIST.append(drone_process)
             drone_process.start()
 
@@ -182,7 +211,9 @@ def main(release: bool) -> None:
         drone_field.randomly_place_drones()  # Randomly place drones in field
         update_graph_edges()
 
-        while not drone_field.drones_are_equidistant(SYS_GRAPH, CONTROLLER.get_location()):
+        while not drone_field.drones_are_equidistant(
+            SYS_GRAPH, CONTROLLER.get_location()
+        ):
             drone_field.space_drones(SYS_GRAPH, update_egress_edges)
             print("STILL NOT EQUIDISTANT")
             print(SYS_GRAPH)
@@ -196,12 +227,17 @@ def main(release: bool) -> None:
 
 
 if __name__ == "__main__":
-    mp.set_start_method('spawn')
+    mp.set_start_method("spawn")
     parser = argparse.ArgumentParser(
-        prog='Project Ghost Shield - RF Simulation',
-        description='***Proof of Concept Simulation for Project Ghost Shield***'
+        prog="Project Ghost Shield - RF Simulation",
+        description="***Proof of Concept Simulation for Project Ghost Shield***",
     )
-    parser.add_argument('-r', '--release', action='store_true', help='If flag is set to true, it runs the program in release mode instead of debug.')
+    parser.add_argument(
+        "-r",
+        "--release",
+        action="store_true",
+        help="If flag is set to true, it runs the program in release mode instead of debug.",
+    )
     args = parser.parse_args()
     release = args.release
     main(release)

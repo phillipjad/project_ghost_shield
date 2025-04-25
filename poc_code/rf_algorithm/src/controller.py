@@ -1,15 +1,15 @@
+import time
 from copy import copy
 from queue import Queue
 from threading import Thread, Timer
-import time
 
 from mc_lib.multicast_client import MulticastClient
 from mc_lib.multicast_server import MulticastServer
 from nacl.signing import SignedMessage
 
 from constants.messaging_constants import MSG_INT_STR_MAP, MSG_STR_E, MSG_STR_INT_MAP
-from utils.vector import Vector
 from message import Message
+from utils.vector import Vector
 
 
 class Controller:
@@ -46,12 +46,15 @@ class Controller:
 
     def process(self, internal_msg_queue: Queue) -> None:
         while (msg := internal_msg_queue.get()) is not None:
-            if (Message.get_source_id(msg) == self.id):
-                continue 
-            if (msg.startswith(b'ERROR')):
-                print(f'ERROR ENCOUNTERED!')
+            if Message.get_source_id(msg) == self.id:
                 continue
-            if (Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.CONFIRM_REGISTRATION]):
+            if msg.startswith(b"ERROR"):
+                print("ERROR ENCOUNTERED!")
+                continue
+            if (
+                Message.get_msg_type(msg)
+                == MSG_STR_INT_MAP[MSG_STR_E.CONFIRM_REGISTRATION]
+            ):
                 confirm_reg_msg = Message.deserialize_msg(msg)
                 drone_id: str = confirm_reg_msg.payload.drone_id
                 self.registered_drone_ids.add(drone_id)
@@ -67,34 +70,50 @@ class Controller:
         num_drones_registered = self.get_num_registered_drones()
         controller_send_queue.put(num_drones_registered)
 
-    def main_thread_runner(self, controller_recv_queue: Queue, controller_send_queue: Queue) -> None:
-        """Main thread activity 
-        """
+    def main_thread_runner(
+        self, controller_recv_queue: Queue, controller_send_queue: Queue
+    ) -> None:
+        """Main thread activity"""
 
         # Blocks on .get()
         while True:
             if (command := controller_recv_queue.get()) is not None:
                 # Currently architecting to be msg_type: str and args as list[<arg_types>]
-                msg_type, args, extra_var = command 
+                msg_type, args, extra_var = command
                 if msg_type in MSG_INT_STR_MAP:
                     msg = Message.serialize_msg(msg_type, args)
-                    if (msg_type == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]):
-                        Thread(target=send_registration_message, args=[msg, self.mcast_send_sock, extra_var-0.5], daemon=True).start()
+                    if msg_type == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]:
+                        Thread(
+                            target=send_registration_message,
+                            args=[msg, self.mcast_send_sock, extra_var - 0.5],
+                            daemon=True,
+                        ).start()
                         # Minus 0.5 so that we can be sure the main thread is responded to before it stops listening
-                        main_thread_response_timer = Timer(interval=extra_var-0.5, function=self.send_num_drones_registered, args=[controller_send_queue])
+                        main_thread_response_timer = Timer(
+                            interval=extra_var - 0.5,
+                            function=self.send_num_drones_registered,
+                            args=[controller_send_queue],
+                        )
                         main_thread_response_timer.start()
 
-def send_registration_message(msg: SignedMessage, socket: MulticastServer, timeout: int = 10):
+
+def send_registration_message(
+    msg: SignedMessage, socket: MulticastServer, timeout: int = 10
+) -> None:
     timeout = time.time() + timeout
-    while (time.time() <= timeout):
+    while time.time() <= timeout:
         socket.send_message(msg)
         time.sleep(0.5)
 
 
 def start_controller_thread(
-    controller_id: str, controller_recv_queue: Queue, controller_send_queue: Queue, x: float, y: float, z: float
+    controller_id: str,
+    controller_recv_queue: Queue,
+    controller_send_queue: Queue,
+    x: float,
+    y: float,
+    z: float,
 ) -> None:
-
     c = Controller(controller_id, x, y, z)
     internal_msg_queue = Queue()
 

@@ -54,6 +54,7 @@ class Message:
         # Offset=72 to skip the signature, crc, and source id bytes.
         return struct.unpack_from("!B", msg, offset=72)[0]
 
+    @staticmethod
     def get_source_id(msg: SignedMessage) -> str:
         return struct.unpack_from("!4s", msg, offset=68)[0].decode("utf-8")
 
@@ -134,7 +135,9 @@ class Message:
     def curr_loc(msg: SignedMessage) -> "Message":
         msg: bytes = Message.check_crc_and_signature(msg)
         header: Header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
-        payload: CurrentLocation = CurrentLocation.deserialize(msg[HEADER_SIZE_BYTES:])[1]
+        payload: CurrentLocation = CurrentLocation.deserialize(msg[HEADER_SIZE_BYTES:])[
+            1
+        ]
         return Message(header, payload)
 
     @staticmethod
@@ -216,10 +219,18 @@ class Message:
             MSG_STR_INT_MAP.get(MSG_STR_E.MOVE_LOCATION): Message.get_move_location,
             MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_JAMMER): Message.get_enable_jammer,
             MSG_STR_INT_MAP.get(MSG_STR_E.DISABLE_JAMMER): Message.get_disable_jammer,
-            MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_RF_DECEPTION): Message.get_enable_rf_deception,
-            MSG_STR_INT_MAP.get(MSG_STR_E.DISABLE_RF_DECEPTION): Message.get_disable_rf_deception,
-            MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_REGISTRATION): Message.get_enable_registration,
-            MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION): Message.get_confirm_registration,
+            MSG_STR_INT_MAP.get(
+                MSG_STR_E.ENABLE_RF_DECEPTION
+            ): Message.get_enable_rf_deception,
+            MSG_STR_INT_MAP.get(
+                MSG_STR_E.DISABLE_RF_DECEPTION
+            ): Message.get_disable_rf_deception,
+            MSG_STR_INT_MAP.get(
+                MSG_STR_E.ENABLE_REGISTRATION
+            ): Message.get_enable_registration,
+            MSG_STR_INT_MAP.get(
+                MSG_STR_E.CONFIRM_REGISTRATION
+            ): Message.get_confirm_registration,
         }
 
         try:

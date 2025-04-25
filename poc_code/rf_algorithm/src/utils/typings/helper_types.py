@@ -15,6 +15,7 @@ class ControllerConfig(TypedDict):
 class DroneConfigT(TypedDict):
     id: str
 
+
 DronesConfig: TypeAlias = list[DroneConfigT]
 
 
