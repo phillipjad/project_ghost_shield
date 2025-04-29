@@ -16,6 +16,21 @@ class PhysicsComponent:
 
         # Lift properties
         self.motors_active = False
+
+        hit_info = raycast(
+            entity.position,
+            direction=Vec3(0, -1, 0),
+            distance=0.5,
+            ignore=[entity]
+        )
+        self.grounded = hit_info.hit and entity.y <= hit_info.world_point.y + 0.1
+
+        if self.grounded:
+            entity.y = hit_info.world_point.y
+            self.velocity = Vec3(0, 0, 0)
+
+
+
         self.max_lift = 15.0  # Maximum lift force - higher than gravity for good acceleration
 
         # Simple altitude control
@@ -80,13 +95,19 @@ class PhysicsComponent:
         )
 
         if hit_info.hit:
-            if self.velocity.y <= 0:  # Moving down
+            # Calculate how close we are to the ground
+            ground_distance = self.entity.y - hit_info.world_point.y
+            
+            if ground_distance < 0.2 and self.velocity.y <= 0:  # Close to ground and moving down
                 self.grounded = True
                 self.velocity.y = 0
-                # Place on ground with slight offset
-                self.entity.y = hit_info.world_point.y + 0.1
+                
+                # Only adjust position if we're actually below or too far above ground
+                if ground_distance < 0 or ground_distance > 0.1:
+                    self.entity.y = hit_info.world_point.y
         else:
-            if self.velocity.y < 0:  # Only unground if moving down
+            # Only unground if actually falling and no ground detected
+            if self.grounded and self.velocity.y < 0:
                 self.grounded = False
 
         # Apply velocity to position

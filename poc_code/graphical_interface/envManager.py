@@ -8,7 +8,7 @@ class Enviroment_Manager:
     instance = None
 
     def __init__(self):
-        window.size = (800, 600)  # Your desired dimensions
+        window.size = (800, 600)  # Your dimensions here
         self.app = Ursina()
         self.environment = None
         self.drones = []
@@ -27,6 +27,10 @@ class Enviroment_Manager:
 
         self.drones.append(GUIDrone(
             starter_position=(1, 5, 1),
+        ))
+
+        self.drones.append(GUIDrone(
+            starter_position=(2, 0, 2),
         ))
 
         # Set the active drone in the environment for coordinate display

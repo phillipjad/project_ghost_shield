@@ -16,20 +16,40 @@ class GUIDrone:
         # Use x,z from starter_position, but place on ground level
         ground_position = Vec3(starter_position[0], 0, starter_position[2])
 
+        # Create the drone entity
         self.drone_entity = Entity(
             model=self.model_path,
             texture='white',
-            position=ground_position,  # Initial position on ground
+            position=ground_position,
             scale=self.scale,
             color=self.color
         )
 
-        # Place drone on ground surface using ray casting
-        hit_info = raycast(self.drone_entity.position +
-                           Vec3(0, 100, 0), Vec3(0, -1, 0), distance=200)
+        # Cast a ray from high above the object straight down
+        ray_start = Vec3(self.drone_entity.x, 100, self.drone_entity.z)
+        ray_direction = Vec3(0, -1, 0)
+        ray_distance = 200
+
+        # Find the ground height
+        hit_info = raycast(ray_start, ray_direction, distance=ray_distance)
+
         if hit_info.hit:
-            # Set y position to actual ground height
-            self.drone_entity.y = hit_info.world_point.y
+            # Set y position to the exact ground height
+            ground_height = hit_info.world_point.y
+            
+            # Handle the specific case where ground is at y=0
+            if abs(ground_height) < 0.001:  # Small threshold for floating point precision
+                ground_height = 0
+                
+            self.drone_entity.y = ground_height
+            
+            # Optional: Orient the drone to match the ground slope
+            # Uncomment if you want the drone to align with the ground surface
+            # ground_normal = hit_info.normal
+            # self.drone_entity.up = ground_normal
+        else:
+            # Fallback if no ground detected
+            self.drone_entity.y = 0
 
         # Add physics component
         self.physics = PhysicsComponent(self.drone_entity)
@@ -40,19 +60,37 @@ class GUIDrone:
         self.acceleration = 2.0
         self.is_moving = False
         self.velocity = Vec3(0, 0, 0)
-
+        self.physics.motors_active = False
         # Takeoff parameters
         self.took_off = False
         self.takeoff_timer = 0
-        self.takeoff_delay = 5  # Wait 5 seconds before taking off
+        self.takeoff_delay = float('inf')  # Set to infinity to prevent 
 
     def update(self, dt):
         """Update drone movement each frame"""
         if not self.drone_entity:
             return
 
-        # Update physics (handles gravity and lift)
-        self.physics.update(dt)
+        if self.physics.motors_active:
+            # Make sure we respect that we're trying to take off
+            self.took_off = True
+            # IMPORTANT: Always update physics when motors are active
+            self.physics.update(dt)
+        elif self.took_off:
+            # Already flying, update physics
+            self.physics.update(dt)
+        else:
+            # Still on ground, just do ground check
+            hit_info = raycast(
+                self.drone_entity.position,
+                direction=Vec3(0, -1, 0),
+                distance=0.5,
+                ignore=[self.drone_entity]
+            )
+            if hit_info.hit:
+                self.drone_entity.y = hit_info.world_point.y
+                self.physics.velocity = Vec3(0, 0, 0)
+                self.physics.grounded = True
 
         # Handle initial waiting period and takeoff
         if not self.took_off:
@@ -66,8 +104,8 @@ class GUIDrone:
             else:
                 return  # Only return if we're not moving
 
-        if not self.is_moving:
-            # Even when not actively moving to a target, apply hover effects
+        if self.took_off and not self.is_moving:
+            # Apply hover effects when flying but not actively moving
             self.apply_hover_effects(dt)
             return
 
@@ -200,6 +238,8 @@ class GUIDrone:
 
     def take_off(self):
         """Explicitly start the drone motors for takeoff"""
+        self.took_off = True
+        self.physics.motors_active = True
         self.physics.take_off()
 
     def land(self):
