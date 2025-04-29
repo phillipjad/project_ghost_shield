@@ -1,3 +1,12 @@
+from queue import Queue
+from threading import Thread
+
+from socket_lib.multicast_client import MulticastClient
+from socket_lib.multicast_server import MulticastServer
+from socket_lib.tcp_socket import TCPSocket
+
+from constants.messaging_constants import MSG_INT_STR_MAP, MSG_STR_E, MSG_STR_INT_MAP
+from message import Message
 from utils.vector import Vector
 
 
@@ -5,12 +14,21 @@ class Drone:
     """Class representing a rudimentary drone. Capable of moving and broadcasting location"""
 
     def __init__(
-        self, id: str, x_coordinate: float, y_coordinate: float, z_coordinate: float
+        self,
+        id: str,
+        x_coordinate: float,
+        y_coordinate: float,
+        z_coordinate: float,
+        port: int = 50000,
     ) -> None:
         self.id = id
         self.x = x_coordinate
         self.y = y_coordinate
         self.z = z_coordinate
+        self.mcast_send_sock = MulticastServer(port=port)
+        self.mcast_rec_sock = MulticastClient(port=port)
+        self.tcp_send_sock = TCPSocket()
+        self.tcp_rec_sock = TCPSocket()
 
     def move_x(self, distance: float) -> None:
         self.x += distance
@@ -61,6 +79,31 @@ class Drone:
     def get_id(self) -> str:
         return self.id
 
+    def listen_udp(self, msg_queue: Queue) -> None:
+        self.mcast_rec_sock.listen(msg_queue)
+
+    def listen_tcp(self, msg_queue: Queue) -> None:
+        self.tcp_rec_sock.bind_and_listen(ip="", port=self.tcp_rec_sock.port)
+
+    def process(self, msg_queue: Queue[bytes], internal_msg_queue: Queue) -> None:
+        while (msg := msg_queue.get()) is not None:
+            if Message.get_source_id(msg) == self.id:
+                continue
+            if msg.startswith(b"ERROR"):
+                print("ERROR ENCOUNTERED!")
+                continue
+            if Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]:
+                internal_msg_queue.put((MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION), [self.id]))
+
+    def main_thread_runner(self, internal_msg_queue: Queue[tuple[int, list]]) -> None:
+        """Main thread activity"""
+        # Blocks on .get()
+        while (command := internal_msg_queue.get()) is not None:
+            msg_type, args = command
+            if msg_type in MSG_INT_STR_MAP:
+                msg = Message.serialize_msg(msg_type, args)
+                self.mcast_send_sock.send_message(msg)
+
     def pretty_print(self) -> str:
         return f"Drone {self.id}"
 
@@ -89,32 +132,16 @@ class Drone:
         return False
 
 
-if __name__ == "__main__":
-    print("testing move_from_vector() method: ")
+def start_drone_process(id: str, x: float, y: float, z: float, ip: str, port: int) -> None:
+    d = Drone(id, x, y, z)
+    listener_queue: Queue[bytes] = Queue()
+    internal_msg_queue: Queue[tuple[int, list]] = Queue()
 
-    # Create two drone instances
-    drone1 = Drone("Alpha", 0.0, 0.0, 0.0)
-    drone2 = Drone("Beta", 3.0, 4.0, 0.0)
+    udp_listener_thread = Thread(target=d.listen_udp, args=[listener_queue], daemon=True)
+    processing_thread = Thread(target=d.process, args=[listener_queue, internal_msg_queue], daemon=True)
+    tcp_listener_thread = Thread(target=d.listen_tcp, args=[listener_queue], daemon=True)
+    udp_listener_thread.start()
+    tcp_listener_thread.start()
+    processing_thread.start()
 
-    print("printing drone1 and drone2 before moving: ")
-    print(drone1)
-    print(drone2)
-    print()
-
-    # Move the first drone
-    drone1.move_from_vector(Vector(-1.0, -1.0, -2.0))
-
-    # Move the second drone
-    drone2.move_from_vector(Vector(3.0, -6.0, 2.0))
-
-    print()
-    print("printing drone1 and drone2 after moving: ")
-    print(drone1)
-    print(drone2)
-    print()
-
-    # Calculate distance between them
-    drone_1_vec = Vector(drone1.get_x(), drone1.get_y(), drone1.get_z())
-    drone_2_vec = Vector(drone2.get_x(), drone2.get_y(), drone2.get_z())
-    distance = drone_1_vec.distance_between_vector(drone_2_vec)
-    print(f"Distance between drones: {distance}")
+    d.main_thread_runner(internal_msg_queue)

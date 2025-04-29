@@ -1,0 +1,32 @@
+{
+    "multicast": {
+        "group": "239.255.255.250",
+        "mc_port_range": "8000:8080"
+    },
+    "controller": {
+        "id": "CTL1",
+        "mc_port": 12345,
+        "ip": "127.0.0.1",
+        "port": 50065
+    },
+    "drones": [
+        {"id": "DRN1", "ip": "127.0.0.1", "port": 50061},
+        {"id": "DRN2", "ip": "127.0.0.1", "port": 50062},
+        {"id": "DRN3", "ip": "127.0.0.1", "port": 50063},
+        {"id": "DRN4", "ip": "127.0.0.1", "port": 50064}
+    ],
+    "sensors": {
+        "max_range": 10,
+        "unit_of_measurement": "m"
+    },
+    "system": {
+        "timeout_s": 10,
+        "private_key": "HGaIxZKzrGq8V9Cx4atMgEq5n3Sx2OHrl4KHmglhpLM=",
+        "public_key": "jl1-5zvKoSnS0L8vRLhfxpkg49cR-UzH5wUuOrwBVjk="
+    },
+    "field": {
+        "x": 10,
+        "y": 10,
+        "z": 10
+    }
+}

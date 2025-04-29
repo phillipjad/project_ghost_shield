@@ -1,73 +1,133 @@
-from controller import Controller
-from drone import Drone
+#!/usr/bin/env python
+
+import argparse
+import multiprocessing as mp
+import signal
+import time
+from queue import Queue
+from threading import Thread
+from time import sleep
+
+from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
+from constants.path_constants import SYSTEM_CONFIG_PATH
+from controller import start_controller_thread
+from drone import start_drone_process
 from field import Field
+from helpers.io_helpers import load_system_config
 from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
 from utils.vector import Vector
 
+# CONSTANTS
 SYS_GRAPH: DroneGraph = DroneGraph(
     # Edges are bi-directional
     multigraph=False
 )
-DRONE_LIST: list[Drone] = []
-MOVING_DRONES: set[Drone] = set()
-CONTROLLER: Controller = None
-# TODO
-GET_LOCATION: callable = None
+
+# System Config
+(
+    MULTICAST_CONFIG,
+    CONTROLLER_CONFIG,
+    DRONES_CONFIG,
+    SENSORS_CONFIG,
+    SYSTEM_CONFIG,
+    FIELD_CONFIG,
+) = load_system_config(SYSTEM_CONFIG_PATH)
+
+get_location: callable = None
+REGISTRATION_TIMEOUT = SYSTEM_CONFIG["timeout_s"]
+CONTROLLER_SEND_QUEUE = Queue()
+CONTROLLER_RECV_QUEUE = Queue()
+PROCESS_LIST: list[mp.Process] = []
 
 
-def mark_drone_moved(drone: Drone) -> None:
-    MOVING_DRONES.add(drone)
+def sig_handler(sig: any, frame: any) -> None:
+    for p in PROCESS_LIST:
+        if p.is_alive():
+            p.terminate()
+    for p in PROCESS_LIST:
+        p.join()
+    exit(0)
 
 
-def register_controller() -> None:
-    global CONTROLLER
-    """Will need to expand later
-    """
-    curr_location = GET_LOCATION if False else (5, 5, 5)
-    if CONTROLLER is None:
-        CONTROLLER = Controller(*curr_location)
+def register_controller() -> bool:
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    try:
+        current_location_xyz: list[float, float, float] = get_location() if False else (5, 5, 5)
+        ctllr_thread = Thread(
+            target=start_controller_thread,
+            args=[
+                CONTROLLER_CONFIG["id"],
+                CONTROLLER_SEND_QUEUE,
+                CONTROLLER_RECV_QUEUE,
+                *current_location_xyz,
+            ],
+            daemon=True,
+        )
+        ctllr_thread.start()
+        return True
+    except Exception:
+        return False
+    finally:
+        signal.signal(signal.SIGINT, sig_handler)
+        signal.signal(signal.SIGTERM, sig_handler)
 
 
-def register_drones() -> None:
-    global DRONE_LIST
-    # In the future this method will actually work to grab all drones in system
-    # Either through config or multicast ping
-    # LOOP CONTROL FLOW
-    # d = grab_drone() / wait_for_ping_respone()
-    # DRONE_LIST.append(d)
+def check_drones_registered(return_list: list[int]) -> None:
+    try:
+        num_drones_registered = CONTROLLER_RECV_QUEUE.get(block=False)
+        return_list.append(num_drones_registered)
+    except Exception:
+        return
 
-    # Equidistant list of drones
-    # DRONE_LIST = [
-    #     Drone(0, 3, 3, 3),
-    #     Drone(1, 3, -3, -3),
-    #     Drone(2, -3, 3, -3),
-    #     Drone(3, -3, -3, 3)
-    # ]
 
-    DRONE_LIST = [Drone(id, 0, 0, 0) for id in range(4)]
+def register_drones() -> int:
+    global CONTROLLER_SEND_QUEUE, CONTROLLER_RECV_QUEUE
+
+    CONTROLLER_SEND_QUEUE.put(
+        (
+            MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_REGISTRATION),
+            [CONTROLLER_CONFIG["id"]],
+            REGISTRATION_TIMEOUT,
+        )
+    )
+
+    return_list: list[int] = []
+    # Wait for drones to register
+    timeout = time.time() + REGISTRATION_TIMEOUT
+    while time.time() <= timeout:
+        Thread(target=check_drones_registered, args=[return_list], daemon=True).start()
+        sleep(0.1)
+    num_drones_registered = return_list[0] if return_list else 0
+    print(f"Number of drones registered: {num_drones_registered}")
+    return num_drones_registered
 
 
 def populate_graph() -> None:
-    global DRONE_LIST, SYS_GRAPH
-    SYS_GRAPH.add_nodes_from(DRONE_LIST)
-    for out_idx, out_d in enumerate(SYS_GRAPH.nodes()):
-        for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
-            if out_d == in_d:
-                continue
-            edge_data = Distance(
-                out_d.get_x() - in_d.get_x(),
-                out_d.get_y() - in_d.get_y(),
-                out_d.get_z() - in_d.get_z(),
-                RWLock(),
-                out_idx,
-            )
-            SYS_GRAPH.add_edge(
-                out_idx,
-                in_idx,
-                edge_data,
-            )
+    global SYS_GRAPH
+    try:
+        SYS_GRAPH.add_nodes_from()
+        for out_idx, out_d in enumerate(SYS_GRAPH.nodes()):
+            for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
+                if out_d == in_d:
+                    continue
+                edge_data = Distance(
+                    out_d.get_x() - in_d.get_x(),
+                    out_d.get_y() - in_d.get_y(),
+                    out_d.get_z() - in_d.get_z(),
+                    RWLock(),
+                    out_idx,
+                )
+                SYS_GRAPH.add_edge(
+                    out_idx,
+                    in_idx,
+                    edge_data,
+                )
+    except Exception as e:
+        print(f"Error populating graph: {e}")
+        return False
 
 
 def update_graph_edges() -> None:
@@ -120,23 +180,59 @@ def update_egress_edges(node_id: int) -> None:
 # TODO - Add logic for controller (location, multicast, etc.)
 
 
-def main() -> None:
-    global DRONE_LIST, SYS_GRAPH
-    register_controller()
-    register_drones()  # ex: [Drone(0, 3, 3, 3), Drone(1, 3, -3, -3), Drone(2, -3, 3, -3), Drone(3, -3, -3, 3)]
-    populate_graph()
+def main(release: bool) -> None:
+    global SYS_GRAPH
 
-    drone_field = Field(10, 10, 10, DRONE_LIST)
-    drone_field.randomly_place_drones()  # Randomly place drones in field
-    update_graph_edges()
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
-    while not drone_field.drones_are_equidistant(SYS_GRAPH, CONTROLLER.get_location()):
-        drone_field.space_drones(SYS_GRAPH, update_egress_edges)
-        print("STILL NOT EQUIDISTANT")
-        print(SYS_GRAPH)
+    try:
+        for drone_config in DRONES_CONFIG:
+            drone_process = (
+                mp.Process(target=start_drone_process, args=[drone_config["id"], 0, 0, 0, drone_config["ip"], drone_config["port"]])
+            )
+            PROCESS_LIST.append(drone_process)
+            drone_process.start()
 
-    print("EQUIDISTANT!")
+        signal.signal(signal.SIGINT, sig_handler)
+        signal.signal(signal.SIGTERM, sig_handler)
+
+        if not register_controller():
+            raise RuntimeError("Failed to register controller")
+        if not register_drones():
+            raise RuntimeError("Failed to register drones")
+        if not populate_graph():
+            raise RuntimeError("Failed to populate graph")
+
+        drone_field = Field(10, 10, 10, DRONE_LIST)
+        drone_field.randomly_place_drones()  # Randomly place drones in field
+        update_graph_edges()
+
+        while not drone_field.drones_are_equidistant(SYS_GRAPH, CONTROLLER.get_location()):
+            drone_field.space_drones(SYS_GRAPH, update_egress_edges)
+            print("STILL NOT EQUIDISTANT")
+            print(SYS_GRAPH)
+
+        print("EQUIDISTANT!")
+    except KeyboardInterrupt:
+        sig_handler(None, None)
+    except Exception as e:
+        print(f"Unhandled exception: {e}")
+        sig_handler(None, None)
 
 
 if __name__ == "__main__":
-    main()
+    mp.set_start_method("spawn")
+    parser = argparse.ArgumentParser(
+        prog="Project Ghost Shield - RF Simulation",
+        description="***Proof of Concept Simulation for Project Ghost Shield***",
+    )
+    parser.add_argument(
+        "-r",
+        "--release",
+        action="store_true",
+        help="If flag is set to true, it runs the program in release mode instead of debug.",
+    )
+    args = parser.parse_args()
+    release = args.release
+    main(release)
