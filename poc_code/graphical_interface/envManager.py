@@ -24,20 +24,36 @@ class Enviroment_Manager:
 
         self.environment.setup()
 
-        self.drones.append(GUIDrone(
+        # Create the first drone
+        drone1 = GUIDrone(
             starter_position=(1, 5, 1),
-        ))
+        )
+        self.drones.append(drone1)
+
+        # Create a second drone with different color
+        drone2 = GUIDrone(
+            starter_position=(-1, 5, -1),
+            color=color.rgb(200, 50, 50)  # Red color to distinguish it
+        )
+        self.drones.append(drone2)
+
+        # IMPORTANT: Add drones to the class tracking list for collision detection
+        GUIDrone.all_drones = self.drones
 
         # Set the active drone in the environment for coordinate display
         self.environment.set_active_drone(self.drones[0])
 
-        # Add delay to allow for initial takeoff using the enhanced move_to function
-        # Move after 4 seconds (extra time to see initial takeoff)
-        self.drones[0].move_to((5, 5, 5), delay=4)
-        # Move again after 7 seconds total
-        self.drones[0].move_to((-5, 8, -5), delay=7)
-        # And return to start after 10 seconds total
-        self.drones[0].move_to((1, 5, 1), delay=10)
+        # Set up drone movements with delays to create a guaranteed collision
+        # Both drones will move to the exact same position (0, 7, 0)
+
+        # First drone movement path
+        # This is where collision will happen
+        self.drones[0].move_to((0, 7, 0), delay=4)
+
+        # Second drone movement path (will meet first drone at the collision point)
+        self.drones[1].move_to((-5, 5, -5), delay=3)  # First move away
+        # Then move to collision point
+        self.drones[1].move_to((0, 7, 0), delay=6)
 
         print("boundary:", self.environment.get_boundary())
 

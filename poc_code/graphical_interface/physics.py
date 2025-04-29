@@ -28,50 +28,34 @@ class PhysicsComponent:
         self.prev_error = 0  # Previous error for derivative calculation
         self.max_thrust = 20.0  # Maximum thrust force
 
+
     def update(self, dt):
         """Update physics for this entity"""
-        # Apply gravity when not on ground
+
+        # Apply gravity explicitly if drone not grounded
         if self.affected_by_gravity and not self.grounded:
             self.velocity.y -= self.gravity * dt
 
-        # Handle lift for drone when motors active
-        if self.motors_active:
-            # If we have a target altitude, move toward it
-            if self.target_altitude is not None:
-                # Calculate error (distance from target)
-                error = self.target_altitude - self.entity.y
+        # ONLY apply thrust if motors active and target altitude exists
+        if self.motors_active and self.target_altitude is not None:
+            error = self.target_altitude - self.entity.y
+            error_derivative = (error - self.prev_error) / dt if dt > 0 else 0
+            self.prev_error = error
 
-                # Calculate error derivative (rate of change)
-                error_derivative = (
-                    error - self.prev_error) / dt if dt > 0 else 0
-                self.prev_error = error
+            thrust = self.gravity
+            thrust += error * self.kp
+            thrust += error_derivative * self.kd
+            thrust = max(0, min(thrust, self.max_thrust))
 
-                # Calculate PID control output (simplified without integral term)
-                # Base thrust counters gravity
-                thrust = self.gravity
+            self.velocity.y += thrust * dt
+        else:
+            # Reset PID errors explicitly when motors are off
+            self.prev_error = 0
 
-                # Add proportional component (responds to distance from target)
-                thrust += error * self.kp
-
-                # Add derivative component (responds to velocity - provides damping)
-                thrust += error_derivative * self.kd
-
-                # Limit thrust to reasonable values
-                thrust = max(0, min(thrust, self.max_thrust))
-
-                # Apply the calculated thrust
-                self.velocity.y += thrust * dt
-            else:
-                # No target altitude, just hover
-                self.velocity.y += self.gravity * dt
-
-            # Once motors are active, we're not grounded
-            self.grounded = False
-
-        # Apply basic air resistance for stability
+        # Air resistance
         self.velocity *= 0.99
 
-        # Check for ground beneath
+        # Ground collision detection
         hit_info = raycast(
             self.entity.position,
             direction=Vec3(0, -1, 0),
@@ -79,18 +63,18 @@ class PhysicsComponent:
             ignore=[self.entity]
         )
 
-        if hit_info.hit:
-            if self.velocity.y <= 0:  # Moving down
-                self.grounded = True
-                self.velocity.y = 0
-                # Place on ground with slight offset
-                self.entity.y = hit_info.world_point.y + 0.1
+        if hit_info.hit and self.velocity.y <= 0:
+            self.grounded = True
+            self.velocity.y = 0
+            self.entity.y = hit_info.world_point.y + 0.1
         else:
-            if self.velocity.y < 0:  # Only unground if moving down
-                self.grounded = False
+            self.grounded = False
 
-        # Apply velocity to position
+        # Update position
         self.entity.position += self.velocity * dt
+
+
+
 
     def set_velocity(self, velocity):
         """Set entity's velocity"""
