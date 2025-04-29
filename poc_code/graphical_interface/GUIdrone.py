@@ -5,7 +5,7 @@ import math
 
 
 class GUIDrone:
-    def __init__(self, starter_position, model_path='models/drone.glb', color=color.white, scale=0.5):
+    def __init__(self, starter_position, model_path='models/drone.glb', color=color.white, scale=0.5, takeoff_delay=float('inf')):
         # Basic properties
         self.model_path = model_path
         self.color = color
@@ -42,11 +42,6 @@ class GUIDrone:
                 ground_height = 0
                 
             self.drone_entity.y = ground_height
-            
-            # Optional: Orient the drone to match the ground slope
-            # Uncomment if you want the drone to align with the ground surface
-            # ground_normal = hit_info.normal
-            # self.drone_entity.up = ground_normal
         else:
             # Fallback if no ground detected
             self.drone_entity.y = 0
@@ -60,18 +55,18 @@ class GUIDrone:
         self.acceleration = 2.0
         self.is_moving = False
         self.velocity = Vec3(0, 0, 0)
-        self.physics.motors_active = False
+        self.physics.lift_force = False
         # Takeoff parameters
         self.took_off = False
         self.takeoff_timer = 0
-        self.takeoff_delay = float('inf')  # Set to infinity to prevent 
+        self.takeoff_delay = takeoff_delay
 
     def update(self, dt):
         """Update drone movement each frame"""
         if not self.drone_entity:
             return
 
-        if self.physics.motors_active:
+        if self.physics.lift_force:
             # Make sure we respect that we're trying to take off
             self.took_off = True
             # IMPORTANT: Always update physics when motors are active
@@ -93,12 +88,13 @@ class GUIDrone:
                 self.physics.grounded = True
 
         # Handle initial waiting period and takeoff
-        if not self.took_off:
-            self.takeoff_timer += dt
-            if self.takeoff_timer >= self.takeoff_delay and not self.is_moving:
-                self.physics.take_off()  # Activate motors for takeoff
-                self.move_to(self.starter_position)
-                self.took_off = True
+            if not self.took_off:
+                self.takeoff_timer += dt
+                if self.takeoff_timer >= self.takeoff_delay and not self.is_moving:
+                    # Use starter position's y as target
+                    self.physics.enable_lift_force(self.starter_position[1])
+                    self.move_to(self.starter_position)
+                    self.took_off = True
             if self.is_moving:  # Still process movement if an external command set it
                 pass  # Continue to movement logic below
             else:
@@ -168,7 +164,7 @@ class GUIDrone:
         self.physics.velocity.z *= 0.95
 
         # Keep motors active to counteract gravity
-        self.physics.motors_active = True
+        self.physics.lift_force = True
 
         # This is key: Continuously vary the target altitude slightly
         # This creates a natural hovering effect
@@ -222,8 +218,8 @@ class GUIDrone:
         self.physics.target_altitude = position.y
 
         # Ensure motors are active when moving
-        if not self.physics.motors_active:
-            self.physics.take_off()
+        if not self.physics.lift_force:
+            self.physics.enable_lift_force()
 
         return True
 
@@ -239,9 +235,15 @@ class GUIDrone:
     def take_off(self):
         """Explicitly start the drone motors for takeoff"""
         self.took_off = True
-        self.physics.motors_active = True
-        self.physics.take_off()
+        
+        # Use the starter position's y-value as the target altitude
+        target_y = self.starter_position[1] if self.starter_position else None
+        self.physics.enable_lift_force(target_y)
+        
+        # If we have a starter position, move to it
+        if self.starter_position:
+            self._execute_move_to(self.starter_position)
 
     def land(self):
         """Begin landing sequence"""
-        self.physics.land()
+        self.physics.disable_lift_force()

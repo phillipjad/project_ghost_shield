@@ -27,10 +27,13 @@ class Enviroment_Manager:
 
         self.drones.append(GUIDrone(
             starter_position=(1, 5, 1),
+            takeoff_delay=4.0  # Will take off after 2 seconds
         ))
 
+        # Second drone with a 4-second takeoff delay
         self.drones.append(GUIDrone(
-            starter_position=(2, 0, 2),
+            starter_position=(2, 6, 2),
+            takeoff_delay=4.0  # Will take off after 4 seconds (staggered takeoff)
         ))
 
         # Set the active drone in the environment for coordinate display
@@ -40,9 +43,9 @@ class Enviroment_Manager:
         # Move after 4 seconds (extra time to see initial takeoff)
         self.drones[0].move_to((5, 5, 5), delay=4)
         # Move again after 7 seconds total
-        self.drones[0].move_to((-5, 8, -5), delay=7)
+        self.drones[0].move_to((-5, 8, -5), delay=4)
         # And return to start after 10 seconds total
-        self.drones[0].move_to((1, 5, 1), delay=10)
+        self.drones[0].move_to((1, 5, 1), delay=4)
 
         print("boundary:", self.environment.get_boundary())
 

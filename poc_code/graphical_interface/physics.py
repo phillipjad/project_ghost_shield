@@ -15,7 +15,7 @@ class PhysicsComponent:
         self.mass = 6.12
 
         # Lift properties
-        self.motors_active = False
+        self.lift_force = False
 
         hit_info = raycast(
             entity.position,
@@ -50,7 +50,7 @@ class PhysicsComponent:
             self.velocity.y -= self.gravity * dt
 
         # Handle lift for drone when motors active
-        if self.motors_active:
+        if self.lift_force:
             # If we have a target altitude, move toward it
             if self.target_altitude is not None:
                 # Calculate error (distance from target)
@@ -130,13 +130,18 @@ class PhysicsComponent:
         """Enable/disable gravity"""
         self.affected_by_gravity = enabled
 
-    def take_off(self):
-        """Start drone motors and set initial target altitude"""
-        self.motors_active = True
-        # Set target altitude 5 units above current ground position
-        self.target_altitude = self.entity.y + 5.0
+    def enable_lift_force(self, target_altitude=None):
+        """Start drone motors and set initial target altitude
+        
+        Args:
+            target_altitude: Optional specific altitude to target, if None, no change to target
+        """
+        self.lift_force = True
+        
+        if target_altitude is not None:
+            self.target_altitude = target_altitude
 
-    def land(self):
+    def disable_lift_force(self):
         """Begin landing by setting target to ground level"""
         # Find ground below
         hit_info = raycast(
@@ -150,5 +155,5 @@ class PhysicsComponent:
             self.target_altitude = hit_info.world_point.y + 0.1
         else:
             # No ground detected, just cut motors
-            self.motors_active = False
+            self.lift_force = False
             self.target_altitude = None
