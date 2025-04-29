@@ -3,8 +3,7 @@ from threading import Thread
 
 from socket_lib.multicast_client import MulticastClient
 from socket_lib.multicast_server import MulticastServer
-from socket_lib.tcp_client import TCPClient
-from socket_lib.tcp_server import TCPServer
+from socket_lib.tcp_socket import TCPSocket
 
 from constants.messaging_constants import MSG_INT_STR_MAP, MSG_STR_E, MSG_STR_INT_MAP
 from message import Message
@@ -28,8 +27,8 @@ class Drone:
         self.z = z_coordinate
         self.mcast_send_sock = MulticastServer(port=port)
         self.mcast_rec_sock = MulticastClient(port=port)
-        self.tcp_send_sock = TCPServer(host="127.0.0.1", port=port)
-        self.tcp_rec_sock = TCPClient(host="127.0.0.1", port=port)
+        self.tcp_send_sock = TCPSocket()
+        self.tcp_rec_sock = TCPSocket()
 
     def move_x(self, distance: float) -> None:
         self.x += distance
@@ -84,7 +83,7 @@ class Drone:
         self.mcast_rec_sock.listen(msg_queue)
 
     def listen_tcp(self, msg_queue: Queue) -> None:
-        self.tcp_rec_sock.listen(msg_queue)
+        self.tcp_rec_sock.bind_and_listen(ip="", port=self.tcp_rec_sock.port)
 
     def process(self, msg_queue: Queue[bytes], internal_msg_queue: Queue) -> None:
         while (msg := msg_queue.get()) is not None:
@@ -120,7 +119,7 @@ class Drone:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
 
 
-def start_drone_process(id: str, x: float, y: float, z: float) -> None:
+def start_drone_process(id: str, x: float, y: float, z: float, ip: str, port: int) -> None:
     d = Drone(id, x, y, z)
     listener_queue: Queue[bytes] = Queue()
     internal_msg_queue: Queue[tuple[int, list]] = Queue()

@@ -5,13 +5,15 @@
     },
     "controller": {
         "id": "CTL1",
-        "mc_port": 12345
+        "mc_port": 12345,
+        "ip": "127.0.0.1",
+        "port": 50065
     },
     "drones": [
-        {"id": "DRN1"},
-        {"id": "DRN2"},
-        {"id": "DRN3"},
-        {"id": "DRN4"}
+        {"id": "DRN1", "ip": "127.0.0.1", "port": 50061},
+        {"id": "DRN2", "ip": "127.0.0.1", "port": 50062},
+        {"id": "DRN3", "ip": "127.0.0.1", "port": 50063},
+        {"id": "DRN4", "ip": "127.0.0.1", "port": 50064}
     ],
     "sensors": {
         "max_range": 10,

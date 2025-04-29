@@ -188,11 +188,9 @@ def main(release: bool) -> None:
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
     try:
-        for i in range(len(DRONES_CONFIG)):
+        for drone_config in DRONES_CONFIG:
             drone_process = (
-                mp.Process(target=start_drone_process, args=[f"DRN{i}", 0, 0, 0])
-                if not release
-                else mp.Process(target=start_drone_process, args=[f"DRN{i}", 0, 0, 0])
+                mp.Process(target=start_drone_process, args=[drone_config["id"], 0, 0, 0, drone_config["ip"], drone_config["port"]])
             )
             PROCESS_LIST.append(drone_process)
             drone_process.start()

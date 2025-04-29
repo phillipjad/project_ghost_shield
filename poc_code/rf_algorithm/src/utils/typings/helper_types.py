@@ -10,10 +10,14 @@ class MulticastConfig(TypedDict):
 class ControllerConfig(TypedDict):
     id: str
     mc_port: int
+    ip: str
+    port: int
 
 
 class DroneConfigT(TypedDict):
     id: str
+    ip: str
+    port: int
 
 
 DronesConfig: TypeAlias = list[DroneConfigT]
