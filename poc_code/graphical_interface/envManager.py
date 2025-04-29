@@ -1,4 +1,4 @@
-from ursina import time
+from ursina import time, window
 from ursina import *
 from environment import Environment
 from GUIdrone import GUIDrone
@@ -8,6 +8,7 @@ class Enviroment_Manager:
     instance = None
 
     def __init__(self):
+        window.size = (800, 600)  # Your desired dimensions
         self.app = Ursina()
         self.environment = None
         self.drones = []
