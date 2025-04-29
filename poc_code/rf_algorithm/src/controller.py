@@ -3,8 +3,10 @@ from copy import copy
 from queue import Queue
 from threading import Thread, Timer
 
-from mc_lib.multicast_client import MulticastClient
-from mc_lib.multicast_server import MulticastServer
+from socket_lib.multicast_client import MulticastClient
+from socket_lib.multicast_server import MulticastServer
+from socket_lib.tcp_server import TCPServer
+from socket_lib.tcp_client import TCPClient
 from nacl.signing import SignedMessage
 
 from constants.messaging_constants import MSG_INT_STR_MAP, MSG_STR_E, MSG_STR_INT_MAP
@@ -21,6 +23,8 @@ class Controller:
         self.registered_drone_ids: set[str] = set()
         self.mcast_send_sock = MulticastServer(port=port)
         self.mcast_rec_sock = MulticastClient(port=port)
+        self.tcp_send_sock = TCPServer(port=port)
+        self.tcp_rec_sock = TCPClient(port=port)
 
     def get_location(self) -> Vector:
         return copy(self.location)

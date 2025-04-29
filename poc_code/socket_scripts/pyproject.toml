@@ -3,12 +3,15 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mclib"
+name = "socket-lib"
 version = "0.1.0"
-description = "Multicast Client and Server script"
+description = "Objective socket classes"
 readme = "README.md"
 authors = [
-    { name = "Phillip Dickey", email = "pdickey@gmu.edu" }
+    { name = "Phillip Dickey", email = "pdickey@gmu.edu" },
+#    { name = "Enzo Fernandez", email = "" },
+#    { name = "Sasha Cherian", email = "" },
+#    { name = "Khoi Le", email = "" },
 ]
 requires-python = ">=3.11"
 

@@ -10,10 +10,10 @@ requires-python = ">=3.11"
 
 dependencies = [
     "crc32c>=2.7.1",
-    "mclib",
     "pynacl>=1.5.0",
     "ruff~=0.9.3",
     "rustworkx~=0.16.0",
+    "socket-lib",
 ]
 
 [tool.ruff.lint]
@@ -36,4 +36,4 @@ ignore= [
 
 [tool.uv.sources]
 mc-lib = { path = "pl/mc_lib-0.1.0-py3-none-any.whl" }
-mclib = { path = "pl/mclib-0.1.0-py3-none-any.whl" }
+socket-lib = { path = "pl/socket_lib-0.1.0-py3-none-any.whl" }

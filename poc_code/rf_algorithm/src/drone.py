@@ -1,8 +1,10 @@
 from queue import Queue
 from threading import Thread
 
-from mc_lib.multicast_client import MulticastClient
-from mc_lib.multicast_server import MulticastServer
+from socket_lib.multicast_client import MulticastClient
+from socket_lib.multicast_server import MulticastServer
+from socket_lib.tcp_server import TCPServer 
+from socket_lib.tcp_client import TCPClient 
 
 from constants.messaging_constants import MSG_INT_STR_MAP, MSG_STR_E, MSG_STR_INT_MAP
 from message import Message
@@ -26,6 +28,8 @@ class Drone:
         self.z = z_coordinate
         self.mcast_send_sock = MulticastServer(port=port)
         self.mcast_rec_sock = MulticastClient(port=port)
+        self.tcp_send_sock = TCPServer(port=port)
+        self.tcp_rec_sock = TCPClient(port=port)
 
     def move_x(self, distance: float) -> None:
         self.x += distance

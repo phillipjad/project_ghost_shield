@@ -108,24 +108,28 @@ def register_drones() -> int:
 
 
 def populate_graph() -> None:
-    global DRONE_LIST, SYS_GRAPH
-    SYS_GRAPH.add_nodes_from(DRONE_LIST)
-    for out_idx, out_d in enumerate(SYS_GRAPH.nodes()):
-        for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
-            if out_d == in_d:
-                continue
-            edge_data = Distance(
-                out_d.get_x() - in_d.get_x(),
-                out_d.get_y() - in_d.get_y(),
-                out_d.get_z() - in_d.get_z(),
-                RWLock(),
-                out_idx,
-            )
-            SYS_GRAPH.add_edge(
-                out_idx,
-                in_idx,
-                edge_data,
-            )
+    global SYS_GRAPH
+    try:
+        SYS_GRAPH.add_nodes_from()
+        for out_idx, out_d in enumerate(SYS_GRAPH.nodes()):
+            for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
+                if out_d == in_d:
+                    continue
+                edge_data = Distance(
+                    out_d.get_x() - in_d.get_x(),
+                    out_d.get_y() - in_d.get_y(),
+                    out_d.get_z() - in_d.get_z(),
+                    RWLock(),
+                    out_idx,
+                )
+                SYS_GRAPH.add_edge(
+                    out_idx,
+                    in_idx,
+                    edge_data,
+                )
+    except Exception as e:
+        print(f"Error populating graph: {e}")
+        return False
 
 
 # TODO - Add function to only update edges between two specfic nodes
@@ -202,10 +206,8 @@ def main(release: bool) -> None:
             raise RuntimeError("Failed to register controller")
         if not register_drones():
             raise RuntimeError("Failed to register drones")
-        while True:
-            sleep(1)
-
-        populate_graph()
+        if not populate_graph():
+            raise RuntimeError("Failed to populate graph")
 
         drone_field = Field(10, 10, 10, DRONE_LIST)
         drone_field.randomly_place_drones()  # Randomly place drones in field
