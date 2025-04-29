@@ -9,6 +9,8 @@ authors = [
 requires-python = ">=3.11"
 
 dependencies = [
+    "module-gps",
+    "module-wifi",
     "panda3d==1.10.15",
     "ruff~=0.9.3",
     "rustworkx~=0.16.0",
@@ -31,3 +33,7 @@ select = [
 ignore= [
     "E501" # Line too long. Let ruff format handle
 ]
+
+[tool.uv.sources]
+module-wifi = { path = "../module_wifi" }
+module-gps = { path = "../module_gps" }
