@@ -37,3 +37,6 @@ ignore= [
 [tool.uv.sources]
 mc-lib = { path = "pl/mc_lib-0.1.0-py3-none-any.whl" }
 socket-lib = { path = "pl/socket_lib-0.1.0-py3-none-any.whl" }
+
+[tool.ruff]
+line-length = 120

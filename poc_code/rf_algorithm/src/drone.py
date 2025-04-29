@@ -3,8 +3,8 @@ from threading import Thread
 
 from socket_lib.multicast_client import MulticastClient
 from socket_lib.multicast_server import MulticastServer
-from socket_lib.tcp_server import TCPServer 
-from socket_lib.tcp_client import TCPClient 
+from socket_lib.tcp_client import TCPClient
+from socket_lib.tcp_server import TCPServer
 
 from constants.messaging_constants import MSG_INT_STR_MAP, MSG_STR_E, MSG_STR_INT_MAP
 from message import Message
@@ -28,8 +28,8 @@ class Drone:
         self.z = z_coordinate
         self.mcast_send_sock = MulticastServer(port=port)
         self.mcast_rec_sock = MulticastClient(port=port)
-        self.tcp_send_sock = TCPServer(port=port)
-        self.tcp_rec_sock = TCPClient(port=port)
+        self.tcp_send_sock = TCPServer(host="127.0.0.1", port=port)
+        self.tcp_rec_sock = TCPClient(host="127.0.0.1", port=port)
 
     def move_x(self, distance: float) -> None:
         self.x += distance
@@ -80,25 +80,23 @@ class Drone:
     def get_id(self) -> str:
         return self.id
 
-    def listen(self, msg_queue: Queue) -> None:
+    def listen_udp(self, msg_queue: Queue) -> None:
         self.mcast_rec_sock.listen(msg_queue)
 
-    def process(self, msg_queue: Queue, internal_msg_queue: Queue) -> None:
+    def listen_tcp(self, msg_queue: Queue) -> None:
+        self.tcp_rec_sock.listen(msg_queue)
+
+    def process(self, msg_queue: Queue[bytes], internal_msg_queue: Queue) -> None:
         while (msg := msg_queue.get()) is not None:
             if Message.get_source_id(msg) == self.id:
                 continue
             if msg.startswith(b"ERROR"):
                 print("ERROR ENCOUNTERED!")
                 continue
-            if (
-                Message.get_msg_type(msg)
-                == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]
-            ):
-                internal_msg_queue.put(
-                    (MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION), [self.id])
-                )
+            if Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]:
+                internal_msg_queue.put((MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION), [self.id]))
 
-    def main_thread_runner(self, internal_msg_queue: Queue) -> None:
+    def main_thread_runner(self, internal_msg_queue: Queue[tuple[int, list]]) -> None:
         """Main thread activity"""
         # Blocks on .get()
         while (command := internal_msg_queue.get()) is not None:
@@ -124,14 +122,14 @@ class Drone:
 
 def start_drone_process(id: str, x: float, y: float, z: float) -> None:
     d = Drone(id, x, y, z)
-    listener_queue = Queue()
-    internal_msg_queue = Queue()
+    listener_queue: Queue[bytes] = Queue()
+    internal_msg_queue: Queue[tuple[int, list]] = Queue()
 
-    listener_thread = Thread(target=d.listen, args=[listener_queue], daemon=True)
-    processing_thread = Thread(
-        target=d.process, args=[listener_queue, internal_msg_queue], daemon=True
-    )
-    listener_thread.start()
+    udp_listener_thread = Thread(target=d.listen_udp, args=[listener_queue], daemon=True)
+    processing_thread = Thread(target=d.process, args=[listener_queue, internal_msg_queue], daemon=True)
+    tcp_listener_thread = Thread(target=d.listen_tcp, args=[listener_queue], daemon=True)
+    udp_listener_thread.start()
+    tcp_listener_thread.start()
     processing_thread.start()
 
     d.main_thread_runner(internal_msg_queue)

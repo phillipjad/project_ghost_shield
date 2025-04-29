@@ -8,9 +8,7 @@ class ConfirmRegistration(MsgObject):
         self.drone_id = drone_id
 
     @staticmethod
-    def deserialize(
-        payload: bytes, offset: int = 0
-    ) -> tuple[int, "ConfirmRegistration"]:
+    def deserialize(payload: bytes, offset: int = 0) -> tuple[int, "ConfirmRegistration"]:
         drone_id = struct.unpack_from("!4s", payload)[0].decode("utf-8")
         offset += 4
         return (offset, ConfirmRegistration(drone_id))

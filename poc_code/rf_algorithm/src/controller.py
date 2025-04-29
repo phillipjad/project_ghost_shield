@@ -75,7 +75,7 @@ class Controller:
         controller_send_queue.put(num_drones_registered)
 
     def main_thread_runner(
-        self, controller_recv_queue: Queue, controller_send_queue: Queue
+        self, controller_recv_queue: Queue[tuple[int, list[any], any]], controller_send_queue: Queue[any]
     ) -> None:
         """Main thread activity"""
 
@@ -119,7 +119,7 @@ def start_controller_thread(
     z: float,
 ) -> None:
     c = Controller(controller_id, x, y, z)
-    internal_msg_queue = Queue()
+    internal_msg_queue: Queue[tuple[int, list]] = Queue()
 
     listener_thread = Thread(target=c.listen, args=[internal_msg_queue], daemon=True)
     processing_thread = Thread(target=c.process, args=[internal_msg_queue], daemon=True)

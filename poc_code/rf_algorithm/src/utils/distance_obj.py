@@ -5,9 +5,7 @@ from .vector import Vector
 
 
 class Distance:
-    def __init__(
-        self, x: float, y: float, z: float, mutex: RWLock, last_to_write: int = -1
-    ) -> None:
+    def __init__(self, x: float, y: float, z: float, mutex: RWLock, last_to_write: int = -1) -> None:
         self.vector = Vector(x, y, z)
         self.mutex = mutex
         self.last_to_write = last_to_write
@@ -49,9 +47,7 @@ class Distance:
         self.mutex.release_read()
         return vector_magnitude
 
-    def update_vector_with_coords(
-        self, x: float, y: float, z: float, drone_id: int
-    ) -> None:
+    def update_vector_with_coords(self, x: float, y: float, z: float, drone_id: int) -> None:
         """Thread-safe way to update internal distance vector.
 
         Args:

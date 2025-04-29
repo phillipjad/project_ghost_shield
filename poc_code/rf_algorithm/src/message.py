@@ -22,9 +22,7 @@ from message_objects.msg_obj_abc import MsgObject
 
 
 class Message:
-    signing_key_bytes: bytes = load_system_config(SYSTEM_CONFIG_PATH)[4][
-        "private_key"
-    ].encode()
+    signing_key_bytes: bytes = load_system_config(SYSTEM_CONFIG_PATH)[4]["private_key"].encode()
     signing_key: SigningKey = SigningKey(signing_key_bytes, encoder=Base64Encoder)
 
     def __init__(self, header: Header, payload: MsgObject | None) -> None:
@@ -135,9 +133,7 @@ class Message:
     def curr_loc(msg: SignedMessage) -> "Message":
         msg: bytes = Message.check_crc_and_signature(msg)
         header: Header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
-        payload: CurrentLocation = CurrentLocation.deserialize(msg[HEADER_SIZE_BYTES:])[
-            1
-        ]
+        payload: CurrentLocation = CurrentLocation.deserialize(msg[HEADER_SIZE_BYTES:])[1]
         return Message(header, payload)
 
     @staticmethod
@@ -197,13 +193,9 @@ class Message:
             MSG_STR_INT_MAP[MSG_STR_E.ENABLE_JAMMER]: Message.enable_jammer,
             MSG_STR_INT_MAP[MSG_STR_E.DISABLE_JAMMER]: Message.disable_jammer,
             MSG_STR_INT_MAP[MSG_STR_E.ENABLE_RF_DECEPTION]: Message.enable_rf_deception,
-            MSG_STR_INT_MAP[
-                MSG_STR_E.DISABLE_RF_DECEPTION
-            ]: Message.disable_rf_deception,
+            MSG_STR_INT_MAP[MSG_STR_E.DISABLE_RF_DECEPTION]: Message.disable_rf_deception,
             MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]: Message.enable_registration,
-            MSG_STR_INT_MAP[
-                MSG_STR_E.CONFIRM_REGISTRATION
-            ]: Message.confirm_registration,
+            MSG_STR_INT_MAP[MSG_STR_E.CONFIRM_REGISTRATION]: Message.confirm_registration,
         }
 
         try:
@@ -219,18 +211,10 @@ class Message:
             MSG_STR_INT_MAP.get(MSG_STR_E.MOVE_LOCATION): Message.get_move_location,
             MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_JAMMER): Message.get_enable_jammer,
             MSG_STR_INT_MAP.get(MSG_STR_E.DISABLE_JAMMER): Message.get_disable_jammer,
-            MSG_STR_INT_MAP.get(
-                MSG_STR_E.ENABLE_RF_DECEPTION
-            ): Message.get_enable_rf_deception,
-            MSG_STR_INT_MAP.get(
-                MSG_STR_E.DISABLE_RF_DECEPTION
-            ): Message.get_disable_rf_deception,
-            MSG_STR_INT_MAP.get(
-                MSG_STR_E.ENABLE_REGISTRATION
-            ): Message.get_enable_registration,
-            MSG_STR_INT_MAP.get(
-                MSG_STR_E.CONFIRM_REGISTRATION
-            ): Message.get_confirm_registration,
+            MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_RF_DECEPTION): Message.get_enable_rf_deception,
+            MSG_STR_INT_MAP.get(MSG_STR_E.DISABLE_RF_DECEPTION): Message.get_disable_rf_deception,
+            MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_REGISTRATION): Message.get_enable_registration,
+            MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION): Message.get_confirm_registration,
         }
 
         try:

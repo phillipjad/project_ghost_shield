@@ -41,9 +41,7 @@ class Vector:
         """
         return (self.x, self.y, self.z)
 
-    def _update_vector(
-        self, *, x: float | None = None, y: float | None = None, z: float | None = None
-    ) -> None:
+    def _update_vector(self, *, x: float | None = None, y: float | None = None, z: float | None = None) -> None:
         """Protected method to mutate the internal state of the calling vector.
 
         Args:
@@ -93,9 +91,7 @@ class Vector:
         Returns:
             Vector: Resultant of vector sum.
         """
-        return Vector(
-            self.x + other_vector.x, self.y + other_vector.y, self.z + other_vector.z
-        )
+        return Vector(self.x + other_vector.x, self.y + other_vector.y, self.z + other_vector.z)
 
     def mutating_vector_sum(self, other_vector: "Vector") -> None:
         """Mutates the internal state of the calling Vector by summing the
@@ -116,9 +112,7 @@ class Vector:
         """
         return Vector((-1 * self.x), (-1 * self.y), (-1 * self.z))
 
-    def calculate_force(
-        self, min_distance: float, repulsion_strength: float
-    ) -> "Vector":
+    def calculate_force(self, min_distance: float, repulsion_strength: float) -> "Vector":
         """Calculates a force vector based on the calling Vector's internal state,
         and a passed repulsion_strength. min_distance parameter ensures that at least
         a minimal change occurs.

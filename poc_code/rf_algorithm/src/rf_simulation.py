@@ -55,9 +55,7 @@ def register_controller() -> bool:
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     try:
-        current_location_xyz: list[float, float, float] = (
-            get_location() if False else (5, 5, 5)
-        )
+        current_location_xyz: list[float, float, float] = get_location() if False else (5, 5, 5)
         ctllr_thread = Thread(
             target=start_controller_thread,
             args=[
@@ -213,9 +211,7 @@ def main(release: bool) -> None:
         drone_field.randomly_place_drones()  # Randomly place drones in field
         update_graph_edges()
 
-        while not drone_field.drones_are_equidistant(
-            SYS_GRAPH, CONTROLLER.get_location()
-        ):
+        while not drone_field.drones_are_equidistant(SYS_GRAPH, CONTROLLER.get_location()):
             drone_field.space_drones(SYS_GRAPH, update_egress_edges)
             print("STILL NOT EQUIDISTANT")
             print(SYS_GRAPH)

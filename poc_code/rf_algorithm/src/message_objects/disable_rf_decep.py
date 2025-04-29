@@ -8,9 +8,7 @@ class DisableRFDeception(MsgObject):
         self.disable_delay = disable_delay
 
     @staticmethod
-    def deserialize(
-        payload: bytes, offset: int = 0
-    ) -> tuple[int, "DisableRFDeception"]:
+    def deserialize(payload: bytes, offset: int = 0) -> tuple[int, "DisableRFDeception"]:
         disable_delay = struct.unpack_from("!f", payload, offset)[0]
         offset += 4
         return (offset, DisableRFDeception(disable_delay))
