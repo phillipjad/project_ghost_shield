@@ -10,6 +10,8 @@ requires-python = ">=3.11"
 
 dependencies = [
     "crc32c>=2.7.1",
+    "module-gps",
+    "module-wifi",
     "pynacl>=1.5.0",
     "ruff~=0.9.3",
     "rustworkx~=0.16.0",
@@ -36,6 +38,8 @@ ignore= [
 
 [tool.uv.sources]
 socket-lib = { path = "pl/socket_lib-0.1.0-py3-none-any.whl" }
+module-wifi = { path = "pl/module_wifi-0.1.0-py3-none-any.whl" }
+module-gps = { path = "pl/module_gps-0.1.0-py3-none-any.whl" }
 
 [tool.ruff]
 line-length = 120
