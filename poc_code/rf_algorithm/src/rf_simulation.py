@@ -90,6 +90,7 @@ def check_drones_registered(return_list: list[int]) -> None:
 def register_drones() -> int:
     global CONTROLLER_SEND_QUEUE, CONTROLLER_RECV_QUEUE
 
+    # IMPORTANT: MESSAGE STRUCTURE FOR CONTROLLER QUEUES
     CONTROLLER_SEND_QUEUE.put(
         (
             MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_REGISTRATION),
@@ -332,6 +333,13 @@ def space_drones(field_vector: Vector) -> None:
             SYS_GRAPH.get_node_data(out_id).set_z(max(0, min(z_size, new_z)))
         damping += 0.5 if damping < 10 else 5
         update_egress_edges(out_id)
+        
+        # creating internal graph
+        internal_graph = SYS_GRAPH.copy()
+        # print(f'internal_graph: {internal_graph}')
+        
+        
+        
 
 def main(release: bool) -> None:
     global SYS_GRAPH
