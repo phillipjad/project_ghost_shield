@@ -135,7 +135,7 @@ def send_move_location_message(msg: SignedMessage, tcp_socket: TCPSocket, ip: st
     try:
         ack = ack_queue.get(timeout=1)
     except Exception:
-        pass 
+        pass
     if ack is None or Message.get_msg_type(ack) != MSG_STR_INT_MAP[MSG_STR_E.COMMAND_ACK]:
         print(f"Drone at {ip}:{port} did not respond with an ACK")
         return
