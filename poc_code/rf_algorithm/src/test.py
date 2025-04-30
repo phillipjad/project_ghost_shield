@@ -1,7 +1,8 @@
-from socket_lib.tcp_socket import TCPSocket
 import threading
 import time
 from queue import Queue
+
+from socket_lib.tcp_socket import TCPSocket
 
 
 def simple_server(port: int):

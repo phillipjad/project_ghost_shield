@@ -2,6 +2,7 @@
 
 import argparse
 import multiprocessing as mp
+import random
 import signal
 import time
 from queue import Queue
@@ -11,7 +12,7 @@ from time import sleep
 from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
 from constants.path_constants import SYSTEM_CONFIG_PATH
 from controller import start_controller_thread
-from drone import start_drone_process
+from drone import Drone, start_drone_process
 from field import Field
 from helpers.io_helpers import load_system_config
 from utils.distance_obj import Distance
@@ -40,6 +41,7 @@ REGISTRATION_TIMEOUT = SYSTEM_CONFIG["timeout_s"]
 CONTROLLER_SEND_QUEUE = Queue()
 CONTROLLER_RECV_QUEUE = Queue()
 PROCESS_LIST: list[mp.Process] = []
+DRONE_MAP: dict[str, Drone] = {}
 
 
 def sig_handler(sig: any, frame: any) -> None:
@@ -63,6 +65,8 @@ def register_controller() -> bool:
                 CONTROLLER_SEND_QUEUE,
                 CONTROLLER_RECV_QUEUE,
                 *current_location_xyz,
+                CONTROLLER_CONFIG["ip"],
+                CONTROLLER_CONFIG["port"],
             ],
             daemon=True,
         )
@@ -98,6 +102,8 @@ def register_drones() -> int:
     # Wait for drones to register
     timeout = time.time() + REGISTRATION_TIMEOUT
     while time.time() <= timeout:
+        if return_list:
+            break
         Thread(target=check_drones_registered, args=[return_list], daemon=True).start()
         sleep(0.1)
     num_drones_registered = return_list[0] if return_list else 0
@@ -105,10 +111,105 @@ def register_drones() -> int:
     return num_drones_registered
 
 
-def populate_graph() -> None:
-    global SYS_GRAPH
+def check_location_response(return_list: list[tuple[float, float, float]]) -> None:
     try:
-        SYS_GRAPH.add_nodes_from()
+        location_response = CONTROLLER_RECV_QUEUE.get(block=False)
+        return_list.append(location_response)
+    except Exception:
+        return
+
+
+def get_drone_location(drone_id: str, drone_ip: str, drone_port: int) -> tuple[float, float, float] | None:
+    """Get the location of a drone by its address.
+
+    Args:
+        drone_id (str): The ID of the drone.
+
+    Returns:
+        tuple[float, float, float]: The x, y, z coordinates of the drone.
+    """
+    global CONTROLLER_SEND_QUEUE, CONTROLLER_RECV_QUEUE
+
+    CONTROLLER_SEND_QUEUE.put(
+        (
+            MSG_STR_INT_MAP.get(MSG_STR_E.GET_LOCATION),
+            [CONTROLLER_CONFIG["id"]],
+            [drone_ip, drone_port],
+        )
+    )
+
+    return_list = []
+    timeout = time.time() + 10
+    while time.time() <= timeout:
+        if return_list:
+            break
+        Thread(target=check_location_response, args=[return_list], daemon=True).start()
+        sleep(0.1)
+    drone_location = return_list[0] if return_list else None
+    return drone_location
+
+
+def get_drones(drones_config: list[dict]) -> dict[str, Drone]:
+    """Get the locations of all drones in the system and returns them as non-process Drone objects #TODO - Make separate Drone class.
+
+    Args:
+        drones_config (list[dict]): List of drone configurations.
+
+    Returns:
+        dict[str, Drone]: Dictionary of drone IDs and their corresponding Drone objects.
+    """
+    return {
+        drone["id"]: Drone(drone["id"], *get_drone_location(drone["id"], drone["ip"], drone["port"]), drone["ip"], drone["port"], False)
+        for drone in drones_config
+    }
+
+def move_drone(drone_id: str, x: float, y: float, z: float) -> None:
+    """Move a drone to a new location.
+
+    Args:
+        drone (Drone): The drone to move.
+        x (float): The new x coordinate.
+        y (float): The new y coordinate.
+        z (float): The new z coordinate.
+    """
+    try:
+        drone = DRONE_MAP[drone_id]
+        d_index: int = [index for index, d in enumerate(DRONES_CONFIG) if d["id"] == drone.get_id()][0] 
+        ip: str = DRONES_CONFIG[d_index]["ip"]
+        port: str = DRONES_CONFIG[d_index]["port"]
+        CONTROLLER_SEND_QUEUE.put(
+            (
+                MSG_STR_INT_MAP.get(MSG_STR_E.MOVE_LOCATION),
+                [CONTROLLER_CONFIG["id"], x, y, z],
+                [ip, port],
+            )
+        )
+        return_list = []
+        timeout = time.time() + 10
+        while time.time() <= timeout:
+            if return_list:
+                break
+            Thread(target=check_location_response, args=[return_list], daemon=True).start()
+            sleep(0.1)
+        drone_location = return_list[0] if return_list else None
+        print(f"Drone {drone.get_id()} moved to {drone_location}")  
+        if drone_location:
+            x, y, z = drone_location
+            drone.set_x(x)
+            drone.set_y(y)
+            drone.set_z(z)
+    except Exception as e:
+        print(f"Error moving drone {drone.get_id()}: {e}")
+        return
+
+
+def populate_graph() -> True:
+    global SYS_GRAPH, DRONE_MAP
+
+    try:
+        # Return a list in tuple[<id, x, y, z>] format
+        DRONE_MAP = get_drones(DRONES_CONFIG)
+        SYS_GRAPH.add_nodes_from(list(DRONE_MAP.values()))
         for out_idx, out_d in enumerate(SYS_GRAPH.nodes()):
             for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
                 if out_d == in_d:
@@ -125,6 +226,7 @@ def populate_graph() -> None:
                     in_idx,
                     edge_data,
                 )
+        return True
     except Exception as e:
         print(f"Error populating graph: {e}")
         return False
@@ -188,8 +290,18 @@ def main(release: bool) -> None:
 
     try:
         for drone_config in DRONES_CONFIG:
-            drone_process = (
-                mp.Process(target=start_drone_process, args=[drone_config["id"], 0, 0, 0, drone_config["ip"], drone_config["port"]])
+            drone_process = mp.Process(
+                target=start_drone_process,
+                args=[
+                    drone_config["id"],
+                    0,
+                    0,
+                    0,
+                    drone_config["ip"],
+                    drone_config["port"],
+                    CONTROLLER_CONFIG["ip"],
+                    CONTROLLER_CONFIG["port"],
+                ],
             )
             PROCESS_LIST.append(drone_process)
             drone_process.start()
@@ -204,8 +316,15 @@ def main(release: bool) -> None:
         if not populate_graph():
             raise RuntimeError("Failed to populate graph")
 
-        drone_field = Field(10, 10, 10, DRONE_LIST)
-        drone_field.randomly_place_drones()  # Randomly place drones in field
+        print(SYS_GRAPH)
+
+        for drone_id, drone in DRONE_MAP.items():
+            move_drone(drone_id, random.random(), random.random(), random.random())
+            print(f"Moved drone {drone.get_id()} to {drone.get_x()}, {drone.get_y()}, {drone.get_z()}")
+        
+
+        drone_field = Field(FIELD_CONFIG["x"], FIELD_CONFIG["y"], FIELD_CONFIG["z"], DRONE_LIST)
+        # drone_field.randomly_place_drones()  # Randomly place drones in field
         update_graph_edges()
 
         while not drone_field.drones_are_equidistant(SYS_GRAPH, CONTROLLER.get_location()):

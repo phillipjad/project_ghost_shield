@@ -10,6 +10,7 @@ from constants.path_constants import SYSTEM_CONFIG_PATH
 from constants.proj_constants import HEADER_SIZE_BYTES
 from header import Header
 from helpers.io_helpers import load_system_config
+from message_objects.command_ack import CommandAck
 from message_objects.confirm_reg import ConfirmRegistration
 from message_objects.current_location import CurrentLocation
 from message_objects.disable_jammer import DisableJammer
@@ -17,6 +18,7 @@ from message_objects.disable_rf_decep import DisableRFDeception
 from message_objects.enable_jammer import EnableJammer
 from message_objects.enable_reg import EnableRegistration
 from message_objects.enable_rf_deception import EnableRFDeception
+from message_objects.get_location import GetLocation
 from message_objects.move_location import MoveLocation
 from message_objects.msg_obj_abc import MsgObject
 
@@ -128,6 +130,22 @@ class Message:
         msg = struct.pack(f"!{len(header)}s{len(payload)}s", header, payload)
         return Message.sign_and_crc(msg)
 
+    @staticmethod
+    def get_location(d_id: str) -> SignedMessage:
+        msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.GET_LOCATION)
+
+        header: bytes = Header(d_id, msg_type, 0).to_bytes()
+        msg = struct.pack(f"!{len(header)}s", header)
+        return Message.sign_and_crc(msg)
+
+    @staticmethod
+    def get_command_ack(d_id: str) -> SignedMessage:
+        msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.COMMAND_ACK)
+
+        header: bytes = Header(d_id, msg_type, 0).to_bytes()
+        msg = struct.pack(f"!{len(header)}s", header)
+        return Message.sign_and_crc(msg)
+
     # Deserializing methods
     @staticmethod
     def curr_loc(msg: SignedMessage) -> "Message":
@@ -139,7 +157,7 @@ class Message:
     @staticmethod
     def move_loc(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
-        header = Header(msg[0:HEADER_SIZE_BYTES])
+        header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload: MoveLocation = MoveLocation.deserialize(msg[HEADER_SIZE_BYTES:])[1]
         return Message(header, payload)
 
@@ -186,6 +204,20 @@ class Message:
         return Message(header, payload)
 
     @staticmethod
+    def location(msg: SignedMessage) -> "Message":
+        msg = Message.check_crc_and_signature(msg)
+        header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
+        payload = GetLocation.deserialize(msg[HEADER_SIZE_BYTES:])[1]
+        return Message(header, payload)
+
+    @staticmethod
+    def command_ack(msg: SignedMessage) -> "Message":
+        msg = Message.check_crc_and_signature(msg)
+        header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
+        payload = CommandAck.deserialize(msg[HEADER_SIZE_BYTES:])[1]
+        return Message(header, payload)
+
+    @staticmethod
     def deserialize_msg(msg: SignedMessage) -> Optional["Message"]:
         deserialize_function_map: dict[int, callable] = {
             MSG_STR_INT_MAP[MSG_STR_E.CURRENT_LOCATION]: Message.curr_loc,
@@ -196,6 +228,8 @@ class Message:
             MSG_STR_INT_MAP[MSG_STR_E.DISABLE_RF_DECEPTION]: Message.disable_rf_deception,
             MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]: Message.enable_registration,
             MSG_STR_INT_MAP[MSG_STR_E.CONFIRM_REGISTRATION]: Message.confirm_registration,
+            MSG_STR_INT_MAP[MSG_STR_E.GET_LOCATION]: Message.location,
+            MSG_STR_INT_MAP[MSG_STR_E.COMMAND_ACK]: Message.command_ack,
         }
 
         try:
@@ -215,6 +249,8 @@ class Message:
             MSG_STR_INT_MAP.get(MSG_STR_E.DISABLE_RF_DECEPTION): Message.get_disable_rf_deception,
             MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_REGISTRATION): Message.get_enable_registration,
             MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION): Message.get_confirm_registration,
+            MSG_STR_INT_MAP.get(MSG_STR_E.GET_LOCATION): Message.get_location,
+            MSG_STR_INT_MAP.get(MSG_STR_E.COMMAND_ACK): Message.get_command_ack,
         }
 
         try:

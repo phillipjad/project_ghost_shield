@@ -14,12 +14,9 @@ class TCPSocket:
         self.disconnect()  # Disconnect first if already connected
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.setblocking(False)
+        self.sock.setblocking(True)
 
-        try:
-            self.sock.connect((ip, port))
-        except BlockingIOError:
-            pass  # Expected for non-blocking connect
+        self.sock.connect((ip, port))
 
         self.sel = selectors.DefaultSelector()
         self.sel.register(self.sock, selectors.EVENT_READ, self.receive_message)
@@ -30,8 +27,6 @@ class TCPSocket:
             data = sock.recv(1024)
             if data:
                 queue.put(data)
-            else:
-                queue.put(b"DISCONNECTED")
         except Exception as e:
             queue.put(f"ERROR={e}".encode())
 
@@ -49,7 +44,7 @@ class TCPSocket:
 
         try:
             while self.running:
-                events = self.sel.select(timeout=0.5)
+                events = self.sel.select(timeout=None)
                 for key, _ in events:
                     callback = key.data
                     callback(key.fileobj, queue)
@@ -85,16 +80,17 @@ class TCPSocket:
 
     def bind_and_listen(self, ip: str, port: int):
         self.disconnect()  # Reset if needed
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if (self.sock == None):
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setblocking(True)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((ip, port))
         self.sock.listen()
-        self.sock.setblocking(True)  # Accept is blocking
-        self.running = False  # Not in listen mode yet
+        self.running = False
 
     def accept(self):
         conn, addr = self.sock.accept()
-        conn.setblocking(False)
+        conn.setblocking(True)
         new_conn = TCPSocket()
         new_conn.sock = conn
         new_conn.sel = selectors.DefaultSelector()

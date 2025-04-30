@@ -608,7 +608,7 @@ dependencies = [
     { name = "ruff" },
 ]
 wheels = [
-    { filename = "socket_lib-0.1.0-py3-none-any.whl", hash = "sha256:fa932d5e115af18b2109941dd0854e24bf0d9eedc2a61c3f47e6df13dc3ed15b" },
+    { filename = "socket_lib-0.1.0-py3-none-any.whl", hash = "sha256:2e87bc3ba91a7d3eb35ce8b7af2a410d0622de08e055f19270de5d758f742d3e" },
 ]
 
 [package.metadata]
