@@ -1,11 +1,10 @@
 from queue import Queue
 from threading import Thread
-from time import sleep
 
+from nacl.signing import SignedMessage
 from socket_lib.multicast_client import MulticastClient
 from socket_lib.multicast_server import MulticastServer
 from socket_lib.tcp_socket import TCPSocket
-from nacl.signing import SignedMessage
 
 from constants.messaging_constants import MSG_INT_STR_MAP, MSG_STR_E, MSG_STR_INT_MAP
 from message import Message
@@ -94,9 +93,10 @@ class Drone:
             listener_thread.start()
             listener_thread.join(timeout=0.5)
             conn.disconnect()
-            
 
-    def process(self, msg_queue: Queue[bytes], internal_msg_queue: Queue, controller_tcp_ip: str, controller_tcp_port: int) -> None:
+    def process(
+        self, msg_queue: Queue[bytes], internal_msg_queue: Queue, controller_tcp_ip: str, controller_tcp_port: int
+    ) -> None:
         while (msg := msg_queue.get()) is not None:
             if Message.get_source_id(msg) == self.id:
                 continue
@@ -112,9 +112,11 @@ class Drone:
                 ).start()
 
                 # Send location over multicast
-                internal_msg_queue.put((
-                    MSG_STR_INT_MAP[MSG_STR_E.CURRENT_LOCATION],
-                    [self.id, self.x, self.y, self.z],)
+                internal_msg_queue.put(
+                    (
+                        MSG_STR_INT_MAP[MSG_STR_E.CURRENT_LOCATION],
+                        [self.id, self.x, self.y, self.z],
+                    )
                 )
             elif Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]:
                 internal_msg_queue.put((MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION), [self.id]))
@@ -146,24 +148,33 @@ class Drone:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
 
 
-def send_ack(
-    msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 2
-) -> None:
+def send_ack(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 2) -> None:
     tcp_socket.connect(ip=ip, port=port)
     # After connect we now have a socket. Add timeout
     tcp_socket.sock.settimeout(timeout)
-    #Send ack
+    # Send ack
     tcp_socket.send_message(msg)
     tcp_socket.disconnect()
 
 
-def start_drone_process(id: str, x: float, y: float, z: float, drone_tcp_ip: str, drone_tcp_port: int, controller_tcp_ip: str, controller_tcp_port: int) -> None:
+def start_drone_process(
+    id: str,
+    x: float,
+    y: float,
+    z: float,
+    drone_tcp_ip: str,
+    drone_tcp_port: int,
+    controller_tcp_ip: str,
+    controller_tcp_port: int,
+) -> None:
     d = Drone(id, x, y, z)
     listener_queue: Queue[bytes] = Queue()
     internal_msg_queue: Queue[tuple[int, list]] = Queue()
 
     udp_listener_thread = Thread(target=d.listen_udp, args=[listener_queue], daemon=True)
-    processing_thread = Thread(target=d.process, args=[listener_queue, internal_msg_queue, controller_tcp_ip, controller_tcp_port], daemon=True)
+    processing_thread = Thread(
+        target=d.process, args=[listener_queue, internal_msg_queue, controller_tcp_ip, controller_tcp_port], daemon=True
+    )
     tcp_listener_thread = Thread(target=d.listen_tcp, args=[listener_queue, drone_tcp_ip, drone_tcp_port], daemon=True)
     udp_listener_thread.start()
     tcp_listener_thread.start()

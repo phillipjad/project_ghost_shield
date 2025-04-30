@@ -3,10 +3,10 @@ from copy import copy
 from queue import Queue
 from threading import Thread, Timer
 
+from nacl.signing import SignedMessage
 from socket_lib.multicast_client import MulticastClient
 from socket_lib.multicast_server import MulticastServer
 from socket_lib.tcp_socket import TCPSocket
-from nacl.signing import SignedMessage
 
 from constants.messaging_constants import MSG_INT_STR_MAP, MSG_STR_E, MSG_STR_INT_MAP
 from message import Message
@@ -14,10 +14,9 @@ from utils.vector import Vector
 
 ack_queue: Queue[SignedMessage] = Queue()
 
+
 class Controller:
-    def __init__(
-        self, id: str, x: float, y: float, z: float, port: int = 50000
-    ) -> None:
+    def __init__(self, id: str, x: float, y: float, z: float, port: int = 50000) -> None:
         self.id = id
         self.location = Vector(x, y, z)
         self.registered_drone_ids: set[str] = set()
@@ -66,14 +65,11 @@ class Controller:
             if msg.startswith(b"ERROR"):
                 print("ERROR ENCOUNTERED!")
                 continue
-            if (
-                Message.get_msg_type(msg)
-                == MSG_STR_INT_MAP[MSG_STR_E.CONFIRM_REGISTRATION]
-            ):
+            if Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.CONFIRM_REGISTRATION]:
                 confirm_reg_msg = Message.deserialize_msg(msg)
                 drone_id: str = confirm_reg_msg.payload.drone_id
                 self.registered_drone_ids.add(drone_id)
-            elif (Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.CURRENT_LOCATION]):
+            elif Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.CURRENT_LOCATION]:
                 location_msg = Message.deserialize_msg(msg)
                 drone_id: str = Message.get_source_id(msg)
                 x: float = location_msg.payload.x
@@ -126,17 +122,14 @@ class Controller:
                         ).start()
 
 
-def send_registration_message(
-    msg: SignedMessage, socket: MulticastServer, timeout: int = 10
-) -> None:
+def send_registration_message(msg: SignedMessage, socket: MulticastServer, timeout: int = 10) -> None:
     timeout = time.time() + timeout
     while time.time() <= timeout:
         socket.send_message(msg)
         time.sleep(0.5)
 
-def send_get_location_message(
-    msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 5 
-) -> None:
+
+def send_get_location_message(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 5) -> None:
     ack: SignedMessage | None = None
     tcp_socket.connect(ip=ip, port=port)
     # After connect we now have a socket. Add timeout
@@ -151,16 +144,12 @@ def send_get_location_message(
         return
     tcp_socket.disconnect()
 
-    
 
-
-def send_ack(
-    msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 2
-) -> None:
+def send_ack(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 2) -> None:
     tcp_socket.connect(ip=ip, port=port)
     # After connect we now have a socket. Add timeout
     tcp_socket.sock.settimeout(timeout)
-    #Send ack
+    # Send ack
     tcp_socket.send_message(msg)
     tcp_socket.disconnect()
 

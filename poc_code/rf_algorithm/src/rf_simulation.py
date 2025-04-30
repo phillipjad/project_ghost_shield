@@ -109,12 +109,14 @@ def register_drones() -> int:
     print(f"Number of drones registered: {num_drones_registered}")
     return num_drones_registered
 
+
 def check_location_response(return_list: list[tuple[float, float, float]]) -> None:
     try:
         location_response = CONTROLLER_RECV_QUEUE.get(block=False)
         return_list.append(location_response)
     except Exception:
         return
+
 
 def get_drone_location(drone_id: str, drone_ip: str, drone_port: int) -> tuple[float, float, float] | None:
     """Get the location of a drone by its address.
@@ -156,13 +158,10 @@ def get_drones(drones_config: list[dict]) -> list[tuple[str, float, float, float
         list[tuple[str, float, float, float]]: List of tuples containing drone ID and its location.
     """
     return [
-        Drone(
-            drone["id"],
-            *get_drone_location(drone["id"], drone["ip"], drone["port"]),
-            False
-        )
+        Drone(drone["id"], *get_drone_location(drone["id"], drone["ip"], drone["port"]), False)
         for drone in drones_config
     ]
+
 
 def populate_graph() -> True:
     global SYS_GRAPH
@@ -251,20 +250,18 @@ def main(release: bool) -> None:
 
     try:
         for drone_config in DRONES_CONFIG:
-            drone_process = (
-                mp.Process(
-                    target=start_drone_process,
-                    args=[
-                        drone_config["id"],
-                        0,
-                        0,
-                        0,
-                        drone_config["ip"],
-                        drone_config["port"],
-                        CONTROLLER_CONFIG["ip"],
-                        CONTROLLER_CONFIG["port"],
-                    ]
-                )
+            drone_process = mp.Process(
+                target=start_drone_process,
+                args=[
+                    drone_config["id"],
+                    0,
+                    0,
+                    0,
+                    drone_config["ip"],
+                    drone_config["port"],
+                    CONTROLLER_CONFIG["ip"],
+                    CONTROLLER_CONFIG["port"],
+                ],
             )
             PROCESS_LIST.append(drone_process)
             drone_process.start()
@@ -278,7 +275,7 @@ def main(release: bool) -> None:
             raise RuntimeError("Failed to register drones")
         if not populate_graph():
             raise RuntimeError("Failed to populate graph")
-        
+
         print(SYS_GRAPH)
 
         drone_field = Field(10, 10, 10, DRONE_LIST)
