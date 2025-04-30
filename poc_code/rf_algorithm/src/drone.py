@@ -87,14 +87,14 @@ class Drone:
         self.mcast_rec_sock.listen(listener_queue)
 
     def listen_tcp(self, listener_queue: Queue, ip: str, port: int) -> None:
+        self.tcp_rec_sock.bind_and_listen(ip=ip, port=port)
         while True:
-            print(f'binding and listening on {ip}:{port}')
-            self.tcp_rec_sock.bind_and_listen(ip=ip, port=port)
-            conn, addr = self.tcp_rec_sock.accept()
-            print(f"Server on port {port} accepted connection from {addr}")
-            Thread(target=conn.listen, args=[listener_queue], daemon=True).start()
-            sleep(5)
-
+            conn, _ = self.tcp_rec_sock.accept()
+            listener_thread = Thread(target=conn.listen, args=[listener_queue], daemon=True)
+            listener_thread.start()
+            listener_thread.join(timeout=0.5)
+            conn.disconnect()
+            
 
     def process(self, msg_queue: Queue[bytes], internal_msg_queue: Queue, controller_tcp_ip: str, controller_tcp_port: int) -> None:
         while (msg := msg_queue.get()) is not None:
@@ -129,9 +129,7 @@ class Drone:
             msg_type, args = command
             if msg_type in MSG_INT_STR_MAP:
                 msg = Message.serialize_msg(msg_type, args)
-                for i in range(3):
-                    # Retry sending the message 3 times
-                    self.mcast_send_sock.send_message(msg)
+                self.mcast_send_sock.send_message(msg)
 
     def pretty_print(self) -> str:
         return f"Drone {self.id}"
@@ -151,7 +149,6 @@ class Drone:
 def send_ack(
     msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 2
 ) -> None:
-    print(f"Sending ack to {ip}:{port}")    
     tcp_socket.connect(ip=ip, port=port)
     # After connect we now have a socket. Add timeout
     tcp_socket.sock.settimeout(timeout)

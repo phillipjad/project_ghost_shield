@@ -143,7 +143,6 @@ def get_drone_location(drone_id: str, drone_ip: str, drone_port: int) -> tuple[f
         Thread(target=check_location_response, args=[return_list], daemon=True).start()
         sleep(0.1)
     drone_location = return_list[0] if return_list else None
-    print(f"Drone {drone_ip}:{drone_port} returned location: {drone_location}")
     return drone_location
 
 
@@ -165,11 +164,11 @@ def get_drones(drones_config: list[dict]) -> list[tuple[str, float, float, float
         for drone in drones_config
     ]
 
-def populate_graph() -> None:
+def populate_graph() -> True:
     global SYS_GRAPH
     try:
         # Return a list in tuple[<id, x, y, z>] format
-        get_drones(DRONES_CONFIG)
+        DRONE_LIST = get_drones(DRONES_CONFIG)
         SYS_GRAPH.add_nodes_from(DRONE_LIST)
         for out_idx, out_d in enumerate(SYS_GRAPH.nodes()):
             for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
@@ -187,6 +186,7 @@ def populate_graph() -> None:
                     in_idx,
                     edge_data,
                 )
+        return True
     except Exception as e:
         print(f"Error populating graph: {e}")
         return False
@@ -278,6 +278,8 @@ def main(release: bool) -> None:
             raise RuntimeError("Failed to register drones")
         if not populate_graph():
             raise RuntimeError("Failed to populate graph")
+        
+        print(SYS_GRAPH)
 
         drone_field = Field(10, 10, 10, DRONE_LIST)
         drone_field.randomly_place_drones()  # Randomly place drones in field
