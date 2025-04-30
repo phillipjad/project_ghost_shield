@@ -43,7 +43,7 @@ CONTROLLER_RECV_QUEUE = Queue()
 PROCESS_LIST: list[mp.Process] = []
 DRONE_MAP: dict[str, Drone] = {}
 
-
+""" Cleans up all running drone processes (terminates them) on program termination. """
 def sig_handler(sig: any, frame: any) -> None:
     for p in PROCESS_LIST:
         if p.is_alive():
@@ -127,6 +127,8 @@ def get_drone_location(drone_id: str, drone_ip: str, drone_port: int) -> tuple[f
     Returns:
         tuple[float, float, float]: The x, y, z coordinates of the drone.
     """
+    
+    # IMPORTANT MESSAGE STRUCTURE FOR CONTROLLER QUEUES
     global CONTROLLER_SEND_QUEUE, CONTROLLER_RECV_QUEUE
 
     CONTROLLER_SEND_QUEUE.put(

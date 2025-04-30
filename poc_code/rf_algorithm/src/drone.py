@@ -144,6 +144,8 @@ class Drone:
 
     def main_thread_runner(self, internal_msg_queue: Queue[tuple[int, list]]) -> None:
         """Main thread activity"""
+        
+        # IMPORTANT SENDING & RECEIEVING MSGS THROUGH DRONE QUEUES USING UDP MULTICAST
         # Blocks on .get()
         while (command := internal_msg_queue.get()) is not None:
             msg_type, args = command

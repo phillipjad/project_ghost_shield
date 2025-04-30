@@ -93,6 +93,7 @@ class Controller:
     ) -> None:
         """Main thread activity"""
 
+        # IMPORTANT SENDING & RECEIEVING MSGS THROUGH CONTROLLER QUEUES USING TCP
         # Blocks on .get()
         while True:
             if (command := controller_recv_queue.get()) is not None:
