@@ -24,6 +24,7 @@ class Controller:
         self.mcast_rec_sock = MulticastClient(port=port)
         self.tcp_send_sock = TCPSocket()
         self.tcp_rec_sock = TCPSocket()
+        self.drone_jamming_map: dict[str, bool] = {}
 
     def get_location(self) -> Vector:
         return copy(self.location)
@@ -76,6 +77,10 @@ class Controller:
                 y: float = location_msg.payload.y
                 z: float = location_msg.payload.z
                 controller_send_queue.put((x, y, z))
+            elif Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.JAMMER_ENABLED]:
+                if Message.get_source_id(msg) not in self.drone_jamming_map:
+                    self.drone_jamming_map[Message.get_source_id(msg)] = True 
+                    controller_send_queue.put(True)
 
     def send_num_drones_registered(self, controller_send_queue: Queue) -> None:
         """Sends the number of registered drones to the controller send queue.
@@ -127,6 +132,23 @@ class Controller:
                             args=[msg, self.tcp_send_sock, *extra_var],
                             daemon=True,
                         ).start()
+                    elif msg_type == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_JAMMER]:
+                        # Start thread to send location request to drone
+                        Thread(
+                            target=send_jammer_message,
+                            args=[msg, self.mcast_send_sock],
+                            daemon=True,
+                        ).start()
+                        # Reset jamming map after jamming concludes
+                        Timer(
+                            interval=args[1] + 0.5,
+                            function=lambda: self.drone_jamming_map.clear(),
+                        ).start()
+
+def send_jammer_message(msg: SignedMessage, socket: MulticastServer) -> None:
+    for _ in range(3):
+        socket.send_message(msg)
+        time.sleep(0.1)
 
 def send_move_location_message(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int) -> None:
     ack: SignedMessage | None = None

@@ -21,6 +21,8 @@ from message_objects.enable_rf_deception import EnableRFDeception
 from message_objects.get_location import GetLocation
 from message_objects.move_location import MoveLocation
 from message_objects.msg_obj_abc import MsgObject
+from message_objects.jammer_disabled import JammerDisabled
+from message_objects.jammer_enabled import JammerEnabled
 
 
 class Message:
@@ -145,6 +147,22 @@ class Message:
         header: bytes = Header(d_id, msg_type, 0).to_bytes()
         msg = struct.pack(f"!{len(header)}s", header)
         return Message.sign_and_crc(msg)
+    
+    @staticmethod
+    def get_jammer_enabled(d_id: str) -> SignedMessage:
+        msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.JAMMER_ENABLED)
+
+        header: bytes = Header(d_id, msg_type, 0).to_bytes()
+        msg = struct.pack(f"!{len(header)}s", header)
+        return Message.sign_and_crc(msg)
+
+    @staticmethod
+    def get_jammer_disabled(d_id: str) -> SignedMessage:
+        msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.JAMMER_DISABLED)
+
+        header: bytes = Header(d_id, msg_type, 0).to_bytes()
+        msg = struct.pack(f"!{len(header)}s", header)
+        return Message.sign_and_crc(msg)
 
     # Deserializing methods
     @staticmethod
@@ -216,6 +234,20 @@ class Message:
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload = CommandAck.deserialize(msg[HEADER_SIZE_BYTES:])[1]
         return Message(header, payload)
+    
+    @staticmethod
+    def jammer_enabled(msg: SignedMessage) -> "Message":
+        msg = Message.check_crc_and_signature(msg)
+        header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
+        payload = JammerEnabled.deserialize(msg[HEADER_SIZE_BYTES:])[1]
+        return Message(header, payload)
+
+    @staticmethod
+    def jammer_disabled(msg: SignedMessage) -> "Message":
+        msg = Message.check_crc_and_signature(msg)
+        header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
+        payload = JammerDisabled.deserialize(msg[HEADER_SIZE_BYTES:])[1]
+        return Message(header, payload)
 
     @staticmethod
     def deserialize_msg(msg: SignedMessage) -> Optional["Message"]:
@@ -230,6 +262,8 @@ class Message:
             MSG_STR_INT_MAP[MSG_STR_E.CONFIRM_REGISTRATION]: Message.confirm_registration,
             MSG_STR_INT_MAP[MSG_STR_E.GET_LOCATION]: Message.location,
             MSG_STR_INT_MAP[MSG_STR_E.COMMAND_ACK]: Message.command_ack,
+            MSG_STR_INT_MAP[MSG_STR_E.JAMMER_ENABLED]: Message.jammer_enabled,
+            MSG_STR_INT_MAP[MSG_STR_E.JAMMER_DISABLED]: Message.jammer_disabled,
         }
 
         try:
@@ -251,6 +285,8 @@ class Message:
             MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION): Message.get_confirm_registration,
             MSG_STR_INT_MAP.get(MSG_STR_E.GET_LOCATION): Message.get_location,
             MSG_STR_INT_MAP.get(MSG_STR_E.COMMAND_ACK): Message.get_command_ack,
+            MSG_STR_INT_MAP.get(MSG_STR_E.JAMMER_ENABLED): Message.get_jammer_enabled,
+            MSG_STR_INT_MAP.get(MSG_STR_E.JAMMER_DISABLED): Message.get_jammer_disabled,
         }
 
         try:
