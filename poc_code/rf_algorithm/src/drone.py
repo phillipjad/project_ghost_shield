@@ -1,5 +1,6 @@
 from queue import Queue
 from threading import Thread
+import time
 
 from nacl.signing import SignedMessage
 from socket_lib.multicast_client import MulticastClient
@@ -138,6 +139,14 @@ class Drone:
                         [self.id, self.x, self.y, self.z],
                     )
                 )
+            elif Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_JAMMER]:
+                enable_jammer_msg = Message.deserialize_msg(msg)
+                duration: float = enable_jammer_msg.payload.duration
+                Thread(
+                    target=send_jamming_msg,
+                    args=[self.id, self.mcast_send_sock, duration],
+                    daemon=True
+                ).start()
             else:
                 pass
                 # print(f'Unknown {msg=}')
@@ -187,6 +196,12 @@ def send_ack(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, time
     tcp_socket.send_message(msg)
     tcp_socket.disconnect()
 
+def send_jamming_msg(drone_id: str, mcast_send_sock: MulticastServer, duration: float) -> None:
+    """Sends a jamming message to the drone for a given duration"""
+    timeout = time.time() + duration
+    while time.time() <= timeout:
+        msg = Message.serialize_msg(MSG_STR_INT_MAP[MSG_STR_E.JAMMER_ENABLED], [drone_id])
+        mcast_send_sock.send_message(msg)
 
 def start_drone_process(
     id: str,

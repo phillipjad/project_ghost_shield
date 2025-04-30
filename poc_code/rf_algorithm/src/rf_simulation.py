@@ -331,6 +331,35 @@ def space_drones(field_vector: Vector) -> None:
         damping += 0.5 if damping < 10 else 5
         update_egress_edges(out_id)
 
+def enable_jamming(duration: float) -> None:
+    CONTROLLER_SEND_QUEUE.put(
+        (
+            MSG_STR_INT_MAP.get(MSG_STR_E.ENABLE_JAMMER),
+            [CONTROLLER_CONFIG["id"], duration],
+            duration,
+        )
+    )
+
+def check_jamming_response(return_list: list[bool]) -> None:
+    try:
+        jamming_response = CONTROLLER_RECV_QUEUE.get(block=False)
+        return_list.append(jamming_response)
+    except Exception:
+        return
+
+def check_drones_are_jamming() -> None:
+    return_list = []
+    timeout = time.time() + 10
+    while time.time() <= timeout:
+        if len(return_list) == len(DRONES_CONFIG):
+            break
+        Thread(target=check_jamming_response, args=[return_list], daemon=True).start()
+        sleep(0.1)
+    jamming_status = return_list[0] if return_list else False
+    if jamming_status:
+        print(f"Jamming status: {jamming_status}")
+
+
 def main(release: bool) -> None:
     global SYS_GRAPH
     if release:
@@ -387,15 +416,17 @@ def main(release: bool) -> None:
 
         print(SYS_GRAPH)
 
-        # drone_field = Field(FIELD_CONFIG["x"], FIELD_CONFIG["y"], FIELD_CONFIG["z"], DRONE_LIST)
-        # drone_field.randomly_place_drones()  # Randomly place drones in field
-
         while not drones_are_equidistant(controller_vector):
             space_drones(field_dimensions)
             print("STILL NOT EQUIDISTANT")
             print(SYS_GRAPH)
 
+        # Drones are equidistant, so now we can enable jamming
         print("EQUIDISTANT!")
+        enable_jamming(10.0)
+
+        check_drones_are_jamming()
+
         sig_handler(None, None)
     except KeyboardInterrupt:
         sig_handler(None, None)
