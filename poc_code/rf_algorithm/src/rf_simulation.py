@@ -19,6 +19,7 @@ from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
 from utils.vector import Vector
+from wifi_lib import wifi_locator
 
 # CONSTANTS
 SYS_GRAPH: DroneGraph = DroneGraph(
@@ -107,7 +108,7 @@ def register_drones() -> int:
         sleep(0.1)
     num_drones_registered = return_list[0] if return_list else 0
     print(f"Number of drones registered: {num_drones_registered}")
-    return num_drones_registered
+    return num_drones_registered == len(DRONES_CONFIG)
 
 
 def check_location_response(return_list: list[tuple[float, float, float]]) -> None:
@@ -290,20 +291,22 @@ def drones_are_equidistant(controller_location: Vector) -> bool:
 
     return distances.count(distances[0]) == len(distances)
 
-def space_drones(field_vector: Vector, drone_graph: DroneGraph) -> None:
+def space_drones(field_vector: Vector) -> None:
+    global SYS_GRAPH
+
     x_size, y_size, z_size = field_vector.get_internals_as_tuple()
     repulsion_strength = 2.0  # how strong the repulsion is
     damping = 0.15  # how much of the force to apply
     min_distance = 1.0  # minimum distance between drones
 
-    for out_id in drone_graph.node_indices():
+    for out_id in SYS_GRAPH.node_indices():
         force_vector = Vector(0.0, 0.0, 0.0)  # there is no force initially
 
-        for in_id in drone_graph.node_indices():
+        for in_id in SYS_GRAPH.node_indices():
             if out_id == in_id:  # skip if it is the same drone
                 continue
 
-            edge_data: Distance = drone_graph.get_edge_data(out_id, in_id)
+            edge_data: Distance = SYS_GRAPH.get_edge_data(out_id, in_id)
             distance_vector = edge_data.get_vector()
             if edge_data.get_last_to_write() != out_id:
                 distance_vector = distance_vector.as_negated()
@@ -312,24 +315,31 @@ def space_drones(field_vector: Vector, drone_graph: DroneGraph) -> None:
             force_vector.mutating_vector_sum(curr_force_vector)
         force_vector_components = force_vector.get_internals_as_tuple()
         new_x = (
-            drone_graph.get_node_data(out_id).get_x() + force_vector_components[0] * damping
+            SYS_GRAPH.get_node_data(out_id).get_x() + force_vector_components[0] * damping
         )  # calculate the new x coordinate
         new_y = (
-            drone_graph.get_node_data(out_id).get_y() + force_vector_components[1] * damping
+            SYS_GRAPH.get_node_data(out_id).get_y() + force_vector_components[1] * damping
         )  # calculate the new y coordinate
         new_z = (
-            drone_graph.get_node_data(out_id).get_z() + force_vector_components[2] * damping
+            SYS_GRAPH.get_node_data(out_id).get_z() + force_vector_components[2] * damping
         )  # calculate the new z coordinate
 
-        drone_graph.get_node_data(out_id).set_x(max(0, min(x_size, new_x)))
-        drone_graph.get_node_data(out_id).set_y(max(0, min(y_size, new_y)))
+        SYS_GRAPH.get_node_data(out_id).set_x(max(0, min(x_size, new_x)))
+        SYS_GRAPH.get_node_data(out_id).set_y(max(0, min(y_size, new_y)))
         if z_size:
-            drone_graph.get_node_data(out_id).set_z(max(0, min(z_size, new_z)))
+            SYS_GRAPH.get_node_data(out_id).set_z(max(0, min(z_size, new_z)))
         damping += 0.5 if damping < 10 else 5
         update_egress_edges(out_id)
 
 def main(release: bool) -> None:
     global SYS_GRAPH
+    if release:
+        controller_vector = Vector(
+            *wifi_locator.get_xyz_from_ip()
+        )
+    else:
+        controller_vector = Vector(5, 5, 5)
+    print(f"Controller location: {controller_vector.get_internals_as_tuple()}")
 
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -355,9 +365,6 @@ def main(release: bool) -> None:
         signal.signal(signal.SIGINT, sig_handler)
         signal.signal(signal.SIGTERM, sig_handler)
 
-        controller_vector = Vector(
-            CONTROLLER_CONFIG["x"], CONTROLLER_CONFIG["y"], CONTROLLER_CONFIG["z"]
-        )
         field_dimensions = Vector(
             FIELD_CONFIG["x"], FIELD_CONFIG["y"], FIELD_CONFIG["z"]
         )
@@ -374,7 +381,7 @@ def main(release: bool) -> None:
         # Randomize locations of drones
         for idx, drone in enumerate(SYS_GRAPH.nodes()):
             drone = cast(Drone, drone)
-            move_drone(drone.get_id(), random.random(), random.random(), random.random())
+            move_drone(drone.get_id(), random.random() + controller_vector.x, random.random() + controller_vector.y, random.random() + controller_vector.z)
             update_egress_edges(idx)
 
 
@@ -383,12 +390,13 @@ def main(release: bool) -> None:
         # drone_field = Field(FIELD_CONFIG["x"], FIELD_CONFIG["y"], FIELD_CONFIG["z"], DRONE_LIST)
         # drone_field.randomly_place_drones()  # Randomly place drones in field
 
-        while not drones_are_equidistant(SYS_GRAPH, controller_vector):
-            space_drones(field_dimensions, update_egress_edges)
+        while not drones_are_equidistant(controller_vector):
+            space_drones(field_dimensions)
             print("STILL NOT EQUIDISTANT")
             print(SYS_GRAPH)
 
         print("EQUIDISTANT!")
+        sig_handler(None, None)
     except KeyboardInterrupt:
         sig_handler(None, None)
     except Exception as e:
