@@ -141,19 +141,12 @@ class PhysicsComponent:
         if target_altitude is not None:
             self.target_altitude = target_altitude
 
-    def disable_lift_force(self):
-        """Begin landing by setting target to ground level"""
-        # Find ground below
-        hit_info = raycast(
-            self.entity.position,
-            direction=Vec3(0, -1, 0),
-            distance=100,
-            ignore=[self.entity]
-        )
 
-        if hit_info.hit:
-            self.target_altitude = hit_info.world_point.y + 0.1
-        else:
-            # No ground detected, just cut motors
-            self.lift_force = False
-            self.target_altitude = None
+    def disable_lift_force(self):
+        """Immediately disable lift force after collision"""
+        self.lift_force = False
+        self.target_altitude = None
+        # Ensure gravity takes effect
+        self.affected_by_gravity = True
+        # Add some downward velocity for a more realistic fall
+        self.velocity.y = -1.0
