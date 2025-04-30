@@ -102,7 +102,7 @@ def register_drones() -> int:
     # Wait for drones to register
     timeout = time.time() + REGISTRATION_TIMEOUT
     while time.time() <= timeout:
-        if len(return_list) == len(DRONES_CONFIG):
+        if return_list:
             break
         Thread(target=check_drones_registered, args=[return_list], daemon=True).start()
         sleep(0.1)
