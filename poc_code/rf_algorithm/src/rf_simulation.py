@@ -14,7 +14,6 @@ from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
 from constants.path_constants import SYSTEM_CONFIG_PATH
 from controller import start_controller_thread
 from drone import Drone, start_drone_process
-from field import Field
 from helpers.io_helpers import load_system_config
 from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
@@ -54,18 +53,17 @@ def sig_handler(sig: any, frame: any) -> None:
     exit(0)
 
 
-def register_controller() -> bool:
+def register_controller(controller_vector: Vector) -> bool:
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     try:
-        current_location_xyz: list[float, float, float] = get_location() if False else (5, 5, 5)
         ctllr_thread = Thread(
             target=start_controller_thread,
             args=[
                 CONTROLLER_CONFIG["id"],
                 CONTROLLER_SEND_QUEUE,
                 CONTROLLER_RECV_QUEUE,
-                *current_location_xyz,
+                *controller_vector.get_internals_as_tuple(),
                 CONTROLLER_CONFIG["ip"],
                 CONTROLLER_CONFIG["port"],
             ],
@@ -175,7 +173,7 @@ def move_drone(drone_id: str, x: float, y: float, z: float) -> None:
     """
     try:
         drone = DRONE_MAP[drone_id]
-        d_index: int = [index for index, d in enumerate(DRONES_CONFIG) if d["id"] == drone.get_id()][0] 
+        d_index: int = [index for index, d in enumerate(DRONES_CONFIG) if d["id"] == drone.get_id()][0]
         ip: str = DRONES_CONFIG[d_index]["ip"]
         port: str = DRONES_CONFIG[d_index]["port"]
         CONTROLLER_SEND_QUEUE.put(
@@ -203,12 +201,14 @@ def move_drone(drone_id: str, x: float, y: float, z: float) -> None:
         return
 
 
-def populate_graph() -> True:
+def populate_graph(refresh: bool = False) -> True:
     global SYS_GRAPH, DRONE_MAP
 
     try:
         # Return a list in tuple[<id, x, y, z>] format
         DRONE_MAP = get_drones(DRONES_CONFIG)
+        if refresh:
+            SYS_GRAPH.clear()
         SYS_GRAPH.add_nodes_from(list(DRONE_MAP.values()))
         for out_idx, out_d in enumerate(SYS_GRAPH.nodes()):
             for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
@@ -280,8 +280,54 @@ def update_egress_edges(node_id: int) -> None:
         update_graph_edge(edge[0], edge[1], edge[2])
 
 
-# TODO - Add logic for controller (location, multicast, etc.)
+def drones_are_equidistant(controller_location: Vector) -> bool:
+    global SYS_GRAPH
 
+    distances: list[Distance] = []
+    for i in SYS_GRAPH.edges():
+        i = cast(Distance, i)
+        distance = i.distance_between_vectors_using_abs(controller_location)
+        distances.append(distance)
+
+    return distances.count(distances[0]) == len(distances)
+
+def space_drones(field_vector: Vector, drone_graph: DroneGraph) -> None:
+    x_size, y_size, z_size = field_vector.get_internals_as_tuple()
+    repulsion_strength = 2.0  # how strong the repulsion is
+    damping = 0.15  # how much of the force to apply
+    min_distance = 1.0  # minimum distance between drones
+
+    for out_id in drone_graph.node_indices():
+        force_vector = Vector(0.0, 0.0, 0.0)  # there is no force initially
+
+        for in_id in drone_graph.node_indices():
+            if out_id == in_id:  # skip if it is the same drone
+                continue
+
+            edge_data: Distance = drone_graph.get_edge_data(out_id, in_id)
+            distance_vector = edge_data.get_vector()
+            if edge_data.get_last_to_write() != out_id:
+                distance_vector = distance_vector.as_negated()
+
+            curr_force_vector = distance_vector.calculate_force(min_distance, repulsion_strength)
+            force_vector.mutating_vector_sum(curr_force_vector)
+        force_vector_components = force_vector.get_internals_as_tuple()
+        new_x = (
+            drone_graph.get_node_data(out_id).get_x() + force_vector_components[0] * damping
+        )  # calculate the new x coordinate
+        new_y = (
+            drone_graph.get_node_data(out_id).get_y() + force_vector_components[1] * damping
+        )  # calculate the new y coordinate
+        new_z = (
+            drone_graph.get_node_data(out_id).get_z() + force_vector_components[2] * damping
+        )  # calculate the new z coordinate
+
+        drone_graph.get_node_data(out_id).set_x(max(0, min(x_size, new_x)))
+        drone_graph.get_node_data(out_id).set_y(max(0, min(y_size, new_y)))
+        if z_size:
+            drone_graph.get_node_data(out_id).set_z(max(0, min(z_size, new_z)))
+        damping += 0.5 if damping < 10 else 5
+        update_egress_edges(out_id)
 
 def main(release: bool) -> None:
     global SYS_GRAPH
@@ -310,7 +356,14 @@ def main(release: bool) -> None:
         signal.signal(signal.SIGINT, sig_handler)
         signal.signal(signal.SIGTERM, sig_handler)
 
-        if not register_controller():
+        controller_vector = Vector(
+            CONTROLLER_CONFIG["x"], CONTROLLER_CONFIG["y"], CONTROLLER_CONFIG["z"]
+        )
+        field_dimensions = Vector(
+            FIELD_CONFIG["x"], FIELD_CONFIG["y"], FIELD_CONFIG["z"]
+        )
+
+        if not register_controller(controller_vector):
             raise RuntimeError("Failed to register controller")
         if not register_drones():
             raise RuntimeError("Failed to register drones")
@@ -319,19 +372,20 @@ def main(release: bool) -> None:
 
         print(SYS_GRAPH)
 
+        # Randomize locations of drones
         for idx, drone in enumerate(SYS_GRAPH.nodes()):
             drone = cast(Drone, drone)
             move_drone(drone.get_id(), random.random(), random.random(), random.random())
             update_egress_edges(idx)
 
-        
+
         print(SYS_GRAPH)
 
-        drone_field = Field(FIELD_CONFIG["x"], FIELD_CONFIG["y"], FIELD_CONFIG["z"], DRONE_LIST)
+        # drone_field = Field(FIELD_CONFIG["x"], FIELD_CONFIG["y"], FIELD_CONFIG["z"], DRONE_LIST)
         # drone_field.randomly_place_drones()  # Randomly place drones in field
 
-        while not drone_field.drones_are_equidistant(SYS_GRAPH, CONTROLLER.get_location()):
-            drone_field.space_drones(SYS_GRAPH, update_egress_edges)
+        while not drones_are_equidistant(SYS_GRAPH, controller_vector):
+            space_drones(field_dimensions, update_egress_edges)
             print("STILL NOT EQUIDISTANT")
             print(SYS_GRAPH)
 
