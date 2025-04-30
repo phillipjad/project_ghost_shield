@@ -8,6 +8,7 @@ import time
 from queue import Queue
 from threading import Thread
 from time import sleep
+from typing import cast
 
 from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
 from constants.path_constants import SYSTEM_CONFIG_PATH
@@ -192,7 +193,6 @@ def move_drone(drone_id: str, x: float, y: float, z: float) -> None:
             Thread(target=check_location_response, args=[return_list], daemon=True).start()
             sleep(0.1)
         drone_location = return_list[0] if return_list else None
-        print(f"Drone {drone.get_id()} moved to {drone_location}")  
         if drone_location:
             x, y, z = drone_location
             drone.set_x(x)
@@ -319,14 +319,16 @@ def main(release: bool) -> None:
 
         print(SYS_GRAPH)
 
-        for drone_id, drone in DRONE_MAP.items():
-            move_drone(drone_id, random.random(), random.random(), random.random())
-            print(f"Moved drone {drone.get_id()} to {drone.get_x()}, {drone.get_y()}, {drone.get_z()}")
+        for idx, drone in enumerate(SYS_GRAPH.nodes()):
+            drone = cast(Drone, drone)
+            move_drone(drone.get_id(), random.random(), random.random(), random.random())
+            update_egress_edges(idx)
+
         
+        print(SYS_GRAPH)
 
         drone_field = Field(FIELD_CONFIG["x"], FIELD_CONFIG["y"], FIELD_CONFIG["z"], DRONE_LIST)
         # drone_field.randomly_place_drones()  # Randomly place drones in field
-        update_graph_edges()
 
         while not drone_field.drones_are_equidistant(SYS_GRAPH, CONTROLLER.get_location()):
             drone_field.space_drones(SYS_GRAPH, update_egress_edges)
