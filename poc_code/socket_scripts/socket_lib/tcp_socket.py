@@ -14,7 +14,7 @@ class TCPSocket:
         self.disconnect()  # Disconnect first if already connected
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.setblocking(False)
+        self.sock.setblocking(True)
 
         try:
             self.sock.connect((ip, port))
@@ -94,7 +94,7 @@ class TCPSocket:
 
     def accept(self):
         conn, addr = self.sock.accept()
-        conn.setblocking(False)
+        conn.setblocking(True)
         new_conn = TCPSocket()
         new_conn.sock = conn
         new_conn.sel = selectors.DefaultSelector()

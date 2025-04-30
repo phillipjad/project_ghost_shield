@@ -12,6 +12,7 @@ from constants.messaging_constants import MSG_INT_STR_MAP, MSG_STR_E, MSG_STR_IN
 from message import Message
 from utils.vector import Vector
 
+ACK_MAP: dict[str, list[SignedMessage]] = {}
 
 class Controller:
     def __init__(
@@ -22,8 +23,8 @@ class Controller:
         self.registered_drone_ids: set[str] = set()
         self.mcast_send_sock = MulticastServer(port=port)
         self.mcast_rec_sock = MulticastClient(port=port)
-        self.tcp_send_sock = TCPSocket(port=port)
-        self.tcp_rec_sock = TCPSocket(port=port)
+        self.tcp_send_sock = TCPSocket()
+        self.tcp_rec_sock = TCPSocket()
 
     def get_location(self) -> Vector:
         return copy(self.location)
@@ -44,8 +45,17 @@ class Controller:
     def get_num_registered_drones(self) -> int:
         return len(self.registered_drone_ids)
 
-    def listen(self, internal_msg_queue: Queue) -> None:
+    def listen_udp(self, internal_msg_queue: Queue) -> None:
         self.mcast_rec_sock.listen(internal_msg_queue)
+
+    def listen_tcp(self, listener_queue: Queue, ip: str, port: int) -> None:
+        while True:
+            print(f'binding and listening on {ip}:{port}')
+            self.tcp_rec_sock.bind_and_listen(ip=ip, port=port)
+            conn, addr = self.tcp_rec_sock.accept()
+            print(f"Server on port {port} accepted connection from {addr}")
+            Thread(target=conn.listen, args=[listener_queue], daemon=True).start()
+            time.sleep(5)
 
     def process(self, internal_msg_queue: Queue) -> None:
         while (msg := internal_msg_queue.get()) is not None:
@@ -98,6 +108,13 @@ class Controller:
                             args=[controller_send_queue],
                         )
                         main_thread_response_timer.start()
+                    elif msg_type == MSG_STR_INT_MAP[MSG_STR_E.GET_LOCATION]:
+                        # Start thread to send location request to drone
+                        Thread(
+                            target=send_get_location_message,
+                            args=[msg, self.tcp_send_sock, *extra_var],
+                            daemon=True,
+                        ).start()
 
 
 def send_registration_message(
@@ -108,6 +125,40 @@ def send_registration_message(
         socket.send_message(msg)
         time.sleep(0.5)
 
+def send_get_location_message(
+    msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 5 
+) -> None:
+    ack_queue: Queue[SignedMessage] = Queue()
+    tcp_socket.connect(ip=ip, port=port)
+    # After connect we now have a socket. Add timeout
+    # tcp_socket.sock.settimeout(timeout)
+    print(f'CTL1 sending tcp msg')
+    tcp_socket.send_message(msg)
+    
+    # Drone should send back an ack
+    tcp_socket.receive_message(tcp_socket.sock, ack_queue)
+    # Should really only take one second to get an ack
+    ack: SignedMessage = ack_queue.get(timeout=2)
+    print(f'{ack=}')
+    if ack is None or Message.get_msg_type(ack) != MSG_STR_INT_MAP[MSG_STR_E.COMMAND_ACK]:
+        print(f"Drone at {ip}:{port} did not respond with an ACK")
+        return
+    else:
+        print(f"Drone at {ip}:{port} responded with an ACK. Location coming over multicast")
+    
+    tcp_socket.disconnect()
+
+
+def send_ack(
+    msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 2
+) -> None:
+    tcp_socket.connect(ip=ip, port=port)
+    # After connect we now have a socket. Add timeout
+    tcp_socket.sock.settimeout(timeout)
+    #Send ack
+    tcp_socket.send_message(msg)
+    tcp_socket.disconnect()
+
 
 def start_controller_thread(
     controller_id: str,
@@ -116,13 +167,20 @@ def start_controller_thread(
     x: float,
     y: float,
     z: float,
+    ip: str,
+    port: int,
+    drone_addresses: tuple[str, int],
 ) -> None:
     c = Controller(controller_id, x, y, z)
     internal_msg_queue: Queue[tuple[int, list]] = Queue()
 
-    listener_thread = Thread(target=c.listen, args=[internal_msg_queue], daemon=True)
+    listener_thread_udp = Thread(target=c.listen_udp, args=[internal_msg_queue], daemon=True)
     processing_thread = Thread(target=c.process, args=[internal_msg_queue], daemon=True)
-    listener_thread.start()
+    listener_thread_udp.start()
     processing_thread.start()
+    for drone_address in drone_addresses:
+        ACK_MAP[drone_address[0]] = []
+        # Start a thread to listen for TCP connections from the drones
+        Thread(target=c.listen_tcp, args=[internal_msg_queue, drone_address[0], drone_address[1]], daemon=True).start()
 
     c.main_thread_runner(controller_recv_queue, controller_send_queue)

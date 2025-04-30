@@ -11,7 +11,7 @@ from time import sleep
 from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
 from constants.path_constants import SYSTEM_CONFIG_PATH
 from controller import start_controller_thread
-from drone import start_drone_process
+from drone import Drone, start_drone_process
 from field import Field
 from helpers.io_helpers import load_system_config
 from utils.distance_obj import Distance
@@ -40,6 +40,7 @@ REGISTRATION_TIMEOUT = SYSTEM_CONFIG["timeout_s"]
 CONTROLLER_SEND_QUEUE = Queue()
 CONTROLLER_RECV_QUEUE = Queue()
 PROCESS_LIST: list[mp.Process] = []
+DRONE_LIST: list = []
 
 
 def sig_handler(sig: any, frame: any) -> None:
@@ -63,6 +64,8 @@ def register_controller() -> bool:
                 CONTROLLER_SEND_QUEUE,
                 CONTROLLER_RECV_QUEUE,
                 *current_location_xyz,
+                CONTROLLER_CONFIG["ip"],
+                CONTROLLER_CONFIG["port"],
             ],
             daemon=True,
         )
@@ -98,17 +101,76 @@ def register_drones() -> int:
     # Wait for drones to register
     timeout = time.time() + REGISTRATION_TIMEOUT
     while time.time() <= timeout:
+        if return_list:
+            break
         Thread(target=check_drones_registered, args=[return_list], daemon=True).start()
         sleep(0.1)
     num_drones_registered = return_list[0] if return_list else 0
     print(f"Number of drones registered: {num_drones_registered}")
     return num_drones_registered
 
+def check_location_response(return_list: list[tuple[float, float, float]]) -> None:
+    try:
+        location_response = CONTROLLER_RECV_QUEUE.get(block=False)
+        return_list.append(location_response)
+    except Exception:
+        return
+
+def get_drone_location(drone_id: str, drone_ip: str, drone_port: int) -> tuple[float, float, float] | None:
+    """Get the location of a drone by its address.
+
+    Args:
+        drone_id (str): The ID of the drone.
+
+    Returns:
+        tuple[float, float, float]: The x, y, z coordinates of the drone.
+    """
+    global CONTROLLER_SEND_QUEUE, CONTROLLER_RECV_QUEUE
+
+    CONTROLLER_SEND_QUEUE.put(
+        (
+            MSG_STR_INT_MAP.get(MSG_STR_E.GET_LOCATION),
+            [CONTROLLER_CONFIG["id"]],
+            [drone_ip, drone_port],
+        )
+    )
+
+    return_list = []
+    timeout = time.time() + 10
+    while time.time() <= timeout:
+        if return_list:
+            break
+        Thread(target=check_location_response, args=[return_list], daemon=True).start()
+        sleep(0.1)
+    drone_location = return_list[0] if return_list else None
+    print(f"Drone {drone_ip}:{drone_port} returned location: {drone_location}")
+    return drone_location
+
+
+def get_drones(drones_config: list[dict]) -> list[tuple[str, float, float, float]]:
+    """Get the locations of all drones in the system and returns them as non-process Drone objects #TODO - Make separate Drone class.
+
+    Args:
+        drones_config (list[dict]): List of drone configurations.
+
+    Returns:
+        list[tuple[str, float, float, float]]: List of tuples containing drone ID and its location.
+    """
+    return [
+        Drone(
+            drone["id"],
+            *get_drone_location(drone["id"], drone["ip"], drone["port"]),
+            False
+        )
+        for drone in drones_config
+    ]
 
 def populate_graph() -> None:
     global SYS_GRAPH
     try:
-        SYS_GRAPH.add_nodes_from()
+        # Return a list in tuple[<id, x, y, z>] format
+        get_drones(DRONES_CONFIG)
+        SYS_GRAPH.add_nodes_from(DRONE_LIST)
         for out_idx, out_d in enumerate(SYS_GRAPH.nodes()):
             for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
                 if out_d == in_d:
@@ -190,7 +252,19 @@ def main(release: bool) -> None:
     try:
         for drone_config in DRONES_CONFIG:
             drone_process = (
-                mp.Process(target=start_drone_process, args=[drone_config["id"], 0, 0, 0, drone_config["ip"], drone_config["port"]])
+                mp.Process(
+                    target=start_drone_process,
+                    args=[
+                        drone_config["id"],
+                        0,
+                        0,
+                        0,
+                        drone_config["ip"],
+                        drone_config["port"],
+                        CONTROLLER_CONFIG["ip"],
+                        CONTROLLER_CONFIG["port"],
+                    ]
+                )
             )
             PROCESS_LIST.append(drone_process)
             drone_process.start()
