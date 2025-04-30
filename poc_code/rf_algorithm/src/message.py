@@ -157,7 +157,7 @@ class Message:
     @staticmethod
     def move_loc(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)
-        header = Header(msg[0:HEADER_SIZE_BYTES])
+        header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload: MoveLocation = MoveLocation.deserialize(msg[HEADER_SIZE_BYTES:])[1]
         return Message(header, payload)
 

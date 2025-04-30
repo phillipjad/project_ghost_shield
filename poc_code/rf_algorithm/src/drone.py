@@ -20,6 +20,8 @@ class Drone:
         x_coordinate: float,
         y_coordinate: float,
         z_coordinate: float,
+        drone_tcp_ip: str,
+        drone_tcp_port: int,
         is_process: bool = True,
         port: int = 50000,
     ) -> None:
@@ -27,6 +29,8 @@ class Drone:
         self.x = x_coordinate
         self.y = y_coordinate
         self.z = z_coordinate
+        self.drone_tcp_ip = drone_tcp_ip
+        self.drone_tcp_port = drone_tcp_port
         if is_process:
             self.mcast_send_sock = MulticastServer(port=port)
             self.mcast_rec_sock = MulticastClient(port=port)
@@ -95,9 +99,9 @@ class Drone:
             conn.disconnect()
 
     def process(
-        self, msg_queue: Queue[bytes], internal_msg_queue: Queue, controller_tcp_ip: str, controller_tcp_port: int
+        self, listener_queue: Queue[bytes], internal_msg_queue: Queue, controller_tcp_ip: str, controller_tcp_port: int
     ) -> None:
-        while (msg := msg_queue.get()) is not None:
+        while (msg := listener_queue.get()) is not None:
             if Message.get_source_id(msg) == self.id:
                 continue
             if msg.startswith(b"ERROR"):
@@ -120,6 +124,20 @@ class Drone:
                 )
             elif Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]:
                 internal_msg_queue.put((MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION), [self.id]))
+            elif Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.MOVE_LOCATION]:
+                move_msg = Message.deserialize_msg(msg)
+                x: float = move_msg.payload.x
+                y: float = move_msg.payload.y
+                z: float = move_msg.payload.z
+                self.move_x(x)
+                self.move_y(y)
+                self.move_z(z)
+                internal_msg_queue.put(
+                    (
+                        MSG_STR_INT_MAP[MSG_STR_E.CURRENT_LOCATION],
+                        [self.id, self.x, self.y, self.z],
+                    )
+                )
             else:
                 pass
                 # print(f'Unknown {msg=}')
@@ -167,7 +185,7 @@ def start_drone_process(
     controller_tcp_ip: str,
     controller_tcp_port: int,
 ) -> None:
-    d = Drone(id, x, y, z)
+    d = Drone(id, x, y, z, drone_tcp_ip, drone_tcp_port)
     listener_queue: Queue[bytes] = Queue()
     internal_msg_queue: Queue[tuple[int, list]] = Queue()
 

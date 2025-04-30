@@ -2,6 +2,7 @@
 
 import argparse
 import multiprocessing as mp
+import random
 import signal
 import time
 from queue import Queue
@@ -40,7 +41,7 @@ REGISTRATION_TIMEOUT = SYSTEM_CONFIG["timeout_s"]
 CONTROLLER_SEND_QUEUE = Queue()
 CONTROLLER_RECV_QUEUE = Queue()
 PROCESS_LIST: list[mp.Process] = []
-DRONE_LIST: list = []
+DRONE_MAP: dict[str, Drone] = {}
 
 
 def sig_handler(sig: any, frame: any) -> None:
@@ -148,27 +149,67 @@ def get_drone_location(drone_id: str, drone_ip: str, drone_port: int) -> tuple[f
     return drone_location
 
 
-def get_drones(drones_config: list[dict]) -> list[tuple[str, float, float, float]]:
+def get_drones(drones_config: list[dict]) -> dict[str, Drone]:
     """Get the locations of all drones in the system and returns them as non-process Drone objects #TODO - Make separate Drone class.
 
     Args:
         drones_config (list[dict]): List of drone configurations.
 
     Returns:
-        list[tuple[str, float, float, float]]: List of tuples containing drone ID and its location.
+        dict[str, Drone]: Dictionary of drone IDs and their corresponding Drone objects.
     """
-    return [
-        Drone(drone["id"], *get_drone_location(drone["id"], drone["ip"], drone["port"]), False)
+    return {
+        drone["id"]: Drone(drone["id"], *get_drone_location(drone["id"], drone["ip"], drone["port"]), drone["ip"], drone["port"], False)
         for drone in drones_config
-    ]
+    }
+
+def move_drone(drone_id: str, x: float, y: float, z: float) -> None:
+    """Move a drone to a new location.
+
+    Args:
+        drone (Drone): The drone to move.
+        x (float): The new x coordinate.
+        y (float): The new y coordinate.
+        z (float): The new z coordinate.
+    """
+    try:
+        drone = DRONE_MAP[drone_id]
+        d_index: int = [index for index, d in enumerate(DRONES_CONFIG) if d["id"] == drone.get_id()][0] 
+        ip: str = DRONES_CONFIG[d_index]["ip"]
+        port: str = DRONES_CONFIG[d_index]["port"]
+        CONTROLLER_SEND_QUEUE.put(
+            (
+                MSG_STR_INT_MAP.get(MSG_STR_E.MOVE_LOCATION),
+                [CONTROLLER_CONFIG["id"], x, y, z],
+                [ip, port],
+            )
+        )
+        return_list = []
+        timeout = time.time() + 10
+        while time.time() <= timeout:
+            if return_list:
+                break
+            Thread(target=check_location_response, args=[return_list], daemon=True).start()
+            sleep(0.1)
+        drone_location = return_list[0] if return_list else None
+        print(f"Drone {drone.get_id()} moved to {drone_location}")  
+        if drone_location:
+            x, y, z = drone_location
+            drone.set_x(x)
+            drone.set_y(y)
+            drone.set_z(z)
+    except Exception as e:
+        print(f"Error moving drone {drone.get_id()}: {e}")
+        return
 
 
 def populate_graph() -> True:
-    global SYS_GRAPH
+    global SYS_GRAPH, DRONE_MAP
+
     try:
         # Return a list in tuple[<id, x, y, z>] format
-        DRONE_LIST = get_drones(DRONES_CONFIG)
-        SYS_GRAPH.add_nodes_from(DRONE_LIST)
+        DRONE_MAP = get_drones(DRONES_CONFIG)
+        SYS_GRAPH.add_nodes_from(list(DRONE_MAP.values()))
         for out_idx, out_d in enumerate(SYS_GRAPH.nodes()):
             for in_idx, in_d in enumerate(SYS_GRAPH.nodes()):
                 if out_d == in_d:
@@ -278,8 +319,13 @@ def main(release: bool) -> None:
 
         print(SYS_GRAPH)
 
-        drone_field = Field(10, 10, 10, DRONE_LIST)
-        drone_field.randomly_place_drones()  # Randomly place drones in field
+        for drone_id, drone in DRONE_MAP.items():
+            move_drone(drone_id, random.random(), random.random(), random.random())
+            print(f"Moved drone {drone.get_id()} to {drone.get_x()}, {drone.get_y()}, {drone.get_z()}")
+        
+
+        drone_field = Field(FIELD_CONFIG["x"], FIELD_CONFIG["y"], FIELD_CONFIG["z"], DRONE_LIST)
+        # drone_field.randomly_place_drones()  # Randomly place drones in field
         update_graph_edges()
 
         while not drone_field.drones_are_equidistant(SYS_GRAPH, CONTROLLER.get_location()):

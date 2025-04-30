@@ -120,7 +120,26 @@ class Controller:
                             args=[msg, self.tcp_send_sock, *extra_var],
                             daemon=True,
                         ).start()
+                    elif msg_type == MSG_STR_INT_MAP[MSG_STR_E.MOVE_LOCATION]:
+                        Thread(
+                            target=send_move_location_message,
+                            args=[msg, self.tcp_send_sock, *extra_var],
+                            daemon=True,
+                        ).start()
 
+def send_move_location_message(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int) -> None:
+    ack: SignedMessage | None = None
+    tcp_socket.connect(ip=ip, port=port)
+    # After connect we now have a socket. Add timeout
+    tcp_socket.send_message(msg)
+    try:
+        ack = ack_queue.get(timeout=1)
+    except Exception:
+        pass 
+    if ack is None or Message.get_msg_type(ack) != MSG_STR_INT_MAP[MSG_STR_E.COMMAND_ACK]:
+        print(f"Drone at {ip}:{port} did not respond with an ACK")
+        return
+    tcp_socket.disconnect()
 
 def send_registration_message(msg: SignedMessage, socket: MulticastServer, timeout: int = 10) -> None:
     timeout = time.time() + timeout
