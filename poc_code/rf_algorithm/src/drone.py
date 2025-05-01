@@ -39,15 +39,27 @@ class Drone:
             self.tcp_rec_sock = TCPSocket()
 
     def move_x(self, distance: float) -> None:
+        """Moves the drone in the x direction by a given distance."""
         self.x += distance
 
     def move_y(self, distance: float) -> None:
+        """Moves the drone in the y direction by a given distance."""
         self.y += distance
 
     def move_z(self, distance: float) -> None:
+        """Moves the drone in the z direction by a given distance."""
         self.z += distance
 
     def move_from_vector(self, vector: Vector) -> None:
+        """
+        Moves the drone according to the given 3D movement vector.
+
+        If the vector has zero magnitude, no movement occurs. Otherwise,
+        the drone is moved in the x, y, and z directions based on the vector's components.
+
+        Args:
+            vector (Vector): A 3D vector representing the movement direction and magnitude.
+        """
         # check if vector has exactly 3 components
         # checks if there should be no movement at all
         if vector.get_magnitude() == 0.0:
@@ -67,30 +79,49 @@ class Drone:
         self.move_z(vector_components[2])
 
     def set_x(self, x: float) -> None:
+        """Sets the x coordinate of the drone."""
         self.x = x
 
     def set_y(self, y: float) -> None:
+        """Sets the y coordinate of the drone."""
         self.y = y
 
     def set_z(self, z: float) -> None:
+        """Sets the z coordinate of the drone."""
         self.z = z
 
     def get_x(self) -> float:
+        """Returns the x coordinate of the drone."""
         return self.x
 
     def get_y(self) -> float:
+        """Returns the y coordinate of the drone."""
         return self.y
 
     def get_z(self) -> float:
+        """Returns the z coordinate of the drone."""
         return self.z
 
     def get_id(self) -> str:
+        """Returns the id of the drone."""
         return self.id
 
     def listen_udp(self, listener_queue: Queue) -> None:
+        """Listen for incoming UDP messages and add them to the listener queue.
+
+        Args:
+            listener_queue (Queue): The queue to which incoming messages will be added.
+        """        
         self.mcast_rec_sock.listen(listener_queue)
 
     def listen_tcp(self, listener_queue: Queue, ip: str, port: int) -> None:
+        """Listen for incoming TCP connections and spawn a thread to handle each connection.
+
+        Args:
+            listener_queue (Queue): The queue to which incoming messages will be added.
+            ip (str): The IP address to bind the TCP socket to.
+            port (int): The port to bind the TCP socket to.
+        """        
         self.tcp_rec_sock.bind_and_listen(ip=ip, port=port)
         while True:
             conn, _ = self.tcp_rec_sock.accept()
@@ -102,6 +133,14 @@ class Drone:
     def process(
         self, listener_queue: Queue[bytes], internal_msg_queue: Queue, controller_tcp_ip: str, controller_tcp_port: int
     ) -> None:
+        """Process incoming messages from the listener queue and handle them accordingly.
+
+        Args:
+            listener_queue (Queue[bytes]): The queue from which incoming messages will be read.
+            internal_msg_queue (Queue): The queue to which processed messages will be added.
+            controller_tcp_ip (str): The IP address of the controller.
+            controller_tcp_port (int): The port of the controller.
+        """        
         while (msg := listener_queue.get()) is not None:
             if Message.get_source_id(msg) == self.id:
                 continue
@@ -161,9 +200,11 @@ class Drone:
                 self.mcast_send_sock.send_message(msg)
 
     def pretty_print(self) -> str:
+        """Pretty prints the drone's id and coordinates."""     
         return f"Drone {self.id}"
 
     def __str__(self) -> str:
+        """Returns a string representation of the drone's id and coordinates."""      
         return f"""
             Drone {self.id}
             X Coordinate: {self.x}
@@ -172,10 +213,20 @@ class Drone:
         """
 
     def __repr__(self) -> str:
+        """Returns a string representation of the drone's id and coordinates for debugging."""
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
 
     # checks if two drones are equal by id, x, y, and z
     def __eq__(self, other) -> bool:
+        """Compares two Drone objects for equality based on their id and coordinates.
+
+        Args:
+            self (_type_): The current Drone object.
+            other (_type_): The other Drone object to compare against.
+
+        Returns:
+            bool: True if the drones are equal (same id and coordinates), False otherwise.
+        """        
         if not isinstance(other, Drone):
             return False  # don't attempt to compare against unrelated types
         if (
@@ -189,6 +240,15 @@ class Drone:
 
 
 def send_ack(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 2) -> None:
+    """Sends an acknowledgment message to the specified IP and port using a TCP socket.
+
+    Args:
+        msg (SignedMessage): message to be sent
+        tcp_socket (TCPSocket): TCP socket object used for sending the message
+        ip (str): IP address of the destination
+        port (int): Port number of the destination
+        timeout (int, optional): Timeout for the socket connection. Defaults to 2 seconds.
+    """    
     tcp_socket.connect(ip=ip, port=port)
     # After connect we now have a socket. Add timeout
     tcp_socket.sock.settimeout(timeout)
@@ -197,7 +257,13 @@ def send_ack(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, time
     tcp_socket.disconnect()
 
 def send_jamming_msg(drone_id: str, mcast_send_sock: MulticastServer, duration: float) -> None:
-    """Sends a jamming message to the drone for a given duration"""
+    """Sends a jamming message to the drone for a given duration.
+
+    Args:
+        drone_id (str): id of the drone
+        mcast_send_sock (MulticastServer): MulticastServer object used for sending the message
+        duration (float): duration for which the jamming message should be sent
+    """    
     timeout = time.time() + duration
     while time.time() <= timeout:
         msg = Message.serialize_msg(MSG_STR_INT_MAP[MSG_STR_E.JAMMER_ENABLED], [drone_id])
@@ -213,6 +279,18 @@ def start_drone_process(
     controller_tcp_ip: str,
     controller_tcp_port: int,
 ) -> None:
+    """Starts the drone process by initializing the drone and starting the necessary threads.
+
+    Args:
+        id (str): id of the drone
+        x (float): x coordinate of the drone
+        y (float): y coordinate of the drone
+        z (float): z coordinate of the drone
+        drone_tcp_ip (str): ip address of the drone
+        drone_tcp_port (int): port of the drone
+        controller_tcp_ip (str): ip address of the controller
+        controller_tcp_port (int): port of the controller
+    """    
     d = Drone(id, x, y, z, drone_tcp_ip, drone_tcp_port)
     listener_queue: Queue[bytes] = Queue()
     internal_msg_queue: Queue[tuple[int, list]] = Queue()

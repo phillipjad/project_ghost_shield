@@ -5,6 +5,13 @@ class Vector:
     """Class representing distance vectors."""
 
     def __init__(self, x: float, y: float, z: float) -> None:
+        """Initializes the vector with x, y, and z coordinates.
+
+        Args:
+            x (float): x coordinate of the vector.
+            y (float): y coordinate of the vector.
+            z (float): z coordinate of the vector.
+        """        
         self.x = x
         self.y = y
         self.z = z

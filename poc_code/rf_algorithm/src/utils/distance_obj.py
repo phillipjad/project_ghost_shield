@@ -5,7 +5,20 @@ from .vector import Vector
 
 
 class Distance:
+    """Distance object that represents the distance between two nodes in the system.
+
+    This class is thread-safe and uses a read-write lock to manage concurrent access to the distance vector.
+    """    
     def __init__(self, x: float, y: float, z: float, mutex: RWLock, last_to_write: int = -1) -> None:
+        """Initializes the Distance object with a distance vector and a read-write lock.
+
+        Args:
+            x (float): x coordinate of the distance vector.
+            y (float): y coordinate of the distance vector.
+            z (float): z coordinate of the distance vector.
+            mutex (RWLock): Read-write lock for thread-safe access.
+            last_to_write (int, optional): ID of the last drone to write to the distance vector. Defaults to -1.
+        """        
         self.vector = Vector(x, y, z)
         self.mutex = mutex
         self.last_to_write = last_to_write
@@ -123,6 +136,11 @@ class Distance:
         return distance
 
     def __str__(self) -> str:
+        """String representation of the Distance object.
+
+        Returns:
+            str: String representation of the Distance object.
+        """        
         self.mutex.acquire_read()
         vector_internals = self.vector.get_internals_as_tuple()
         self.mutex.release_read()

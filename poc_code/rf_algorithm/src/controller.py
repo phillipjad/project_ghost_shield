@@ -16,7 +16,20 @@ ack_queue: Queue[SignedMessage] = Queue()
 
 
 class Controller:
+    """Class representing a controller. Capable of sending and receiving messages to/from drones.
+
+    This class is responsible for managing the drones and their locations.
+    """    
     def __init__(self, id: str, x: float, y: float, z: float, port: int = 50000) -> None:
+        """Initializes the controller with an ID and location.
+
+        Args:
+            id (str): ID of the controller.
+            x (float): x-coordinate of the controller's location.
+            y (float): y-coordinate of the controller's location.
+            z (float): z-coordinate of the controller's location.
+            port (int, optional): Port for multicast communication. Defaults to 50000.
+        """        
         self.id = id
         self.location = Vector(x, y, z)
         self.registered_drone_ids: set[str] = set()
@@ -27,6 +40,11 @@ class Controller:
         self.drone_jamming_map: dict[str, bool] = {}
 
     def get_location(self) -> Vector:
+        """Thread-safe way to acquire a copy of the internal location vector.
+
+        Returns:
+            Vector: Internal vector representing the location of the controller.
+        """        
         return copy(self.location)
 
     def register_drone(self, drone_id: str) -> bool:
@@ -43,12 +61,28 @@ class Controller:
         return prev_len < len(self.registered_drone_ids)
 
     def get_num_registered_drones(self) -> int:
+        """Returns the number of registered drones.
+
+        Returns:
+            int: Number of registered drones.
+        """        
         return len(self.registered_drone_ids)
 
     def listen_udp(self, internal_msg_queue: Queue) -> None:
+        """Listens for incoming UDP messages and processes them.
+
+        Args:
+            internal_msg_queue (Queue): Queue to store incoming messages.
+        """        
         self.mcast_rec_sock.listen(internal_msg_queue)
 
     def listen_tcp(self, ip: str, port: int) -> None:
+        """Listens for incoming TCP connections and processes them.
+
+        Args:
+            ip (str): IP address to bind to.
+            port (int): Port to bind to.
+        """        
         global ack_queue
 
         self.tcp_rec_sock.bind_and_listen(ip=ip, port=port)
@@ -60,6 +94,12 @@ class Controller:
             conn.disconnect()
 
     def process(self, internal_msg_queue: Queue, controller_send_queue: Queue) -> None:
+        """Processes incoming messages from the internal message queue.
+
+        Args:
+            internal_msg_queue (Queue): Queue to store incoming messages.
+            controller_send_queue (Queue): Queue to send messages to the controller.
+        """        
         while (msg := internal_msg_queue.get()) is not None:
             if Message.get_source_id(msg) == self.id:
                 continue
@@ -145,11 +185,25 @@ class Controller:
                         ).start()
 
 def send_jammer_message(msg: SignedMessage, socket: MulticastServer) -> None:
+    """Sends a jamming message to the multicast server.
+
+    Args:
+        msg (SignedMessage): The jamming message to be sent.
+        socket (MulticastServer): The multicast server instance to send the message through.
+    """    
     for _ in range(3):
         socket.send_message(msg)
         time.sleep(0.1)
 
 def send_move_location_message(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int) -> None:
+    """Sends a move location message to the drone.
+
+    Args:
+        msg (SignedMessage): The move location message to be sent.
+        tcp_socket (TCPSocket): The TCP socket instance to send the message through.
+        ip (str): The IP address of the drone.
+        port (int): The port of the drone.
+    """    
     ack: SignedMessage | None = None
     tcp_socket.connect(ip=ip, port=port)
     # After connect we now have a socket. Add timeout
@@ -164,6 +218,13 @@ def send_move_location_message(msg: SignedMessage, tcp_socket: TCPSocket, ip: st
     tcp_socket.disconnect()
 
 def send_registration_message(msg: SignedMessage, socket: MulticastServer, timeout: int = 10) -> None:
+    """Broadcasts a registration message to the multicast server.
+
+    Args:
+        msg (SignedMessage): The registration message to be sent.
+        socket (MulticastServer): The multicast server instance to send the message through.
+        timeout (int, optional): The time in seconds to wait before stopping the broadcast. Defaults to 10.
+    """    
     timeout = time.time() + timeout
     while time.time() <= timeout:
         socket.send_message(msg)
@@ -171,6 +232,15 @@ def send_registration_message(msg: SignedMessage, socket: MulticastServer, timeo
 
 
 def send_get_location_message(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 5) -> None:
+    """Sends a get location message to the drone.
+
+    Args:
+        msg (SignedMessage): The get location message to be sent.
+        tcp_socket (TCPSocket): The TCP socket instance to send the message through.
+        ip (str): The IP address of the drone.
+        port (int): The port of the drone.
+        timeout (int, optional): The time in seconds to wait for an ACK. Defaults to 5.
+    """    
     ack: SignedMessage | None = None
     tcp_socket.connect(ip=ip, port=port)
     # After connect we now have a socket. Add timeout
@@ -187,6 +257,15 @@ def send_get_location_message(msg: SignedMessage, tcp_socket: TCPSocket, ip: str
 
 
 def send_ack(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 2) -> None:
+    """Sends an acknowledgment message to the drone.
+
+    Args:
+        msg (SignedMessage): The acknowledgment message to be sent.
+        tcp_socket (TCPSocket): The TCP socket instance to send the message through.
+        ip (str): The IP address of the drone.
+        port (int): The port of the drone.
+        timeout (int, optional): The time in seconds to wait for an ACK. Defaults to 2.
+    """    
     tcp_socket.connect(ip=ip, port=port)
     # After connect we now have a socket. Add timeout
     tcp_socket.sock.settimeout(timeout)
@@ -205,6 +284,18 @@ def start_controller_thread(
     ip: str,
     port: int,
 ) -> None:
+    """Starts the controller thread.
+
+    Args:
+        controller_id (str): ID of the controller.
+        controller_recv_queue (Queue): Queue to receive messages from the controller.
+        controller_send_queue (Queue): Queue to send messages to the controller.
+        x (float): x-coordinate of the controller's location.
+        y (float): y-coordinate of the controller's location.
+        z (float): z-coordinate of the controller's location.
+        ip (str): IP address of the drone.
+        port (int): Port of the drone.
+    """    
     c = Controller(controller_id, x, y, z)
     internal_msg_queue: Queue[tuple[int, list]] = Queue()
 

@@ -2,7 +2,17 @@ import rustworkx as rx
 
 
 class DroneGraph(rx.PyGraph):
+    """DroneGraph is a wrapper around rustworkx.PyGraph to provide additional functionality
+    and to make it easier to work with drone data. It is used to represent a graph of drones
+    and their connections, allowing for operations like adding nodes, edges, and calculating
+    distances between them.
+    """    
     def __str__(self) -> str:
+        """Returns a string representation of the graph, including node data and edges.
+
+        Returns:
+            str: A formatted string representing the graph, including node data and edges.
+        """        
         ret_str = ""
         neighbor_dict: dict[list[int], list[tuple[int, int, int]]]
         for src_node in self.node_indices():
