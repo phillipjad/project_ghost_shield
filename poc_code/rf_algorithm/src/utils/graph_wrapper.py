@@ -1,3 +1,4 @@
+from copy import deepcopy
 import rustworkx as rx
 
 
@@ -14,3 +15,6 @@ class DroneGraph(rx.PyGraph):
                 ret_str += f"\t\t{self.get_node_data(k).pretty_print()} distance: {v}\n"
             ret_str += "\n"
         return ret_str
+
+    def deepcopy(self) -> "DroneGraph":
+        return deepcopy(self)

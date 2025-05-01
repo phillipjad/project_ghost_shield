@@ -130,7 +130,7 @@ def get_drone_location(drone_id: str, drone_ip: str, drone_port: int) -> tuple[f
         tuple[float, float, float]: The x, y, z coordinates of the drone.
     """
     
-    # IMPORTANT MESSAGE STRUCTURE FOR CONTROLLER QUEUES
+    # IMPORTANT: MESSAGE STRUCTURE FOR CONTROLLER QUEUES
     global CONTROLLER_SEND_QUEUE, CONTROLLER_RECV_QUEUE
 
     CONTROLLER_SEND_QUEUE.put(
@@ -296,11 +296,17 @@ def drones_are_equidistant(controller_location: Vector) -> bool:
 
 def space_drones(field_vector: Vector) -> None:
     global SYS_GRAPH
-
+    
+    # calulates x, y, & z vectors to apply
     x_size, y_size, z_size = field_vector.get_internals_as_tuple()
     repulsion_strength = 2.0  # how strong the repulsion is
     damping = 0.15  # how much of the force to apply
     min_distance = 1.0  # minimum distance between drones
+    
+    # creating internal graph
+    # internal_graph = SYS_GRAPH.deepcopy()
+    local_graph = SYS_GRAPH.copy()
+    # print(f'internal_graph: {internal_graph}')
 
     for out_id in SYS_GRAPH.node_indices():
         force_vector = Vector(0.0, 0.0, 0.0)  # there is no force initially
@@ -333,11 +339,6 @@ def space_drones(field_vector: Vector) -> None:
             SYS_GRAPH.get_node_data(out_id).set_z(max(0, min(z_size, new_z)))
         damping += 0.5 if damping < 10 else 5
         update_egress_edges(out_id)
-        
-        # creating internal graph
-        internal_graph = SYS_GRAPH.copy()
-        # print(f'internal_graph: {internal_graph}')
-        
         
         
 
