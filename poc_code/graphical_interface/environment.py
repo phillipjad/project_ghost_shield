@@ -98,6 +98,7 @@ class Environment:
 
             self.camera_text.text = "Camera: First Person (E for Editor Camera)"
 
+
     def get_boundary(self):
         """
         Returns the complete 3D boundary limits of the terrain.
@@ -113,14 +114,20 @@ class Environment:
         max_x = width / 2
         min_z = -depth / 2
         max_z = depth / 2
-        min_y = 0
-        max_y = height
+
+        # Set a higher minimum height to prevent drones from being too close to the terrain
+        min_y = 3.0  # Increased from 0 to 3.0 units above base ground level
+        max_y = height + 2  # Add a bit of extra height for safety
+
+        print(
+            f"Terrain boundaries: X: ({min_x}, {max_x}), Y: ({min_y}, {max_y}), Z: ({min_z}, {max_z})")
 
         return {
             'x': (min_x, max_x),
             'y': (min_y, max_y),
             'z': (min_z, max_z)
         }
+
 
     def set_active_drone(self, drone):
         """Set the drone to track and display coordinates for"""
