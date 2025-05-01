@@ -13,7 +13,6 @@ def input(key):
 
 def main():
     manager = Enviroment_Manager()
-    manager.setup()
     manager.run()
 
 

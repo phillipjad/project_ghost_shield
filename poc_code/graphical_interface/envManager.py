@@ -1,14 +1,15 @@
 from threading import Thread
 from ursina import time, window
 from ursina import *
+from time import sleep
 import json
-import random
 from environment import Environment
 from GUIdrone import GUIDrone
 from rf_simulation import main as rf_main_func
 from queue import Queue
 
-q = Queue()
+positions_queue = Queue()  # RF -> GUI
+drones_queue = Queue()     # GUI -> RF
 
 class Enviroment_Manager:
     instance = None
@@ -24,29 +25,6 @@ class Enviroment_Manager:
         with open("config.json", "r") as f:
             self.config = json.load(f)
 
-    def generate_unique_positions(self, num_positions, bounds):
-        """
-        Randomly place drones within the environment bounds, similar to field.py's approach.
-
-        :param num_positions: Number of positions to generate
-        :param bounds: A dictionary with keys 'x', 'y', 'z' containing (min, max) tuples
-        :return: A list of unique (x, y, z) tuples
-        """
-        positions = []
-
-        for _ in range(num_positions):
-            # Use the full range of the environment
-            x = random.uniform(bounds['x'][0], bounds['x'][1])
-            # Ensure y is positive
-            y = random.uniform(max(0, bounds['y'][0]), bounds['y'][1])
-            z = random.uniform(bounds['z'][0], bounds['z'][1])
-
-            # Round to avoid floating-point precision issues
-            position = (round(x, 2), round(y, 2), round(z, 2))
-            positions.append(position)
-
-        return positions
-
     def setup(self):
         env_cfg = self.config["environment"]
         dims = env_cfg["dimensions"]
@@ -56,32 +34,40 @@ class Enviroment_Manager:
         self.environment = Environment(
             terrain_image=assets["terrain_image"],
             terrain_texture=assets["terrain_texture"],
-            terrain_scale=(dims["x"], dims["y"], dims["z"])  # Adjust as needed
+            terrain_scale=(dims["x"], dims["y"], dims["z"])
         )
-
         self.environment.setup()
 
-        # Generate unique positions for drones
-        unique_positions = self.generate_unique_positions(
-            len(self.config["drones"]), self.environment.get_boundary())
+        # === Get positions from simulation ===
+        print("Getting positions from simulation")
+        drone_positions = positions_queue.get()
+        print("Received positions:", drone_positions)
 
-        print("Unique positions for drones:", unique_positions)
-        for i in range(len(self.config["drones"])):
+        for i, pos in enumerate(drone_positions):
             self.drones.append(GUIDrone(
-                starter_position=unique_positions[i],
-                takeoff_delay=4
+                starter_position=pos,
             ))
-        q.put(self.drones)
+
+
+        # Signal GUI is ready and send drones back
+        print("Putting GUI drones in queue")
+        drones_queue.put(self.drones)
+
 
     def run(self):
         # Create an update entity that will run every frame
         updater = Entity()
+        
+        # Start the RF simulation thread with the new queues and events
         Thread(
             target=rf_main_func,
-            args=(q,),
+            args=(positions_queue, drones_queue,),
             daemon=True
         ).start()
-
+        
+        # Call setup to process the positions
+        self.setup()
+        
         def update_function():
             # Regular updates for all drones
             for drone in self.drones:

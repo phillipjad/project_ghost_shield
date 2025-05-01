@@ -2,17 +2,11 @@ from ursina import *
 
 
 class GUIDrone:
-    def __init__(self, starter_position, model_path='models/drone.glb', color=color.white, scale=1, takeoff_delay=0):
+    def __init__(self, starter_position, model_path='models/drone.glb', color=color.white, scale=1):
         self.model_path = model_path
         self.color = color
         self.starter_position = starter_position
         self.scale = scale
-        self.move_queue = []
-        self.move_cooldown = 0
-        self.takeoff_delay = takeoff_delay
-        self.time_since_start = 0
-        self.move_speed = 3  # Units per second
-
         # Find terrain height at (x,z) position using raycasting
         x, y, z = starter_position
 
@@ -62,49 +56,36 @@ class GUIDrone:
             self.is_moving = False
 
     def update(self, dt):
-        self.time_since_start += dt
-        if self.time_since_start < self.takeoff_delay:
-            return  # Wait for takeoff delay
-
-        # If the drone is moving toward a target
         if self.is_moving and self.target_position:
-            current_pos = self.drone_entity.position
-            target_pos = self.target_position
+            cur  = self.drone_entity.position
+            dest = self.target_position
+            gap  = dest - cur
+            dist = gap.length()
 
-            # Calculate direction vector and distance
-            direction = target_pos - current_pos
-            distance = direction.length()
-
-            # If we're close enough, snap to exact position
-            if distance < 0.1:
-                self.drone_entity.position = target_pos
+            # 1️⃣  close-enough snap
+            if dist < 0.01:
+                print(f"{self.drone_entity} reached {dest}")
+                self.drone_entity.position = dest
                 self.is_moving = False
                 self.target_position = None
+                return
 
-                # Process next item in queue if we have one
-                if self.move_queue:
-                    next_pos = self.move_queue.pop(0)
-                    self.target_position = Vec3(*next_pos)
-                    self.is_moving = True
-            else:
-                # Move toward target at constant speed
-                move_step = min(self.move_speed * dt, distance)
-                normalized_direction = direction.normalized()
-                movement = normalized_direction * move_step
-                self.drone_entity.position += movement
-
-        # If we're not moving but have items in the queue, start moving to the next one
-        elif not self.is_moving and self.move_queue:
-            next_pos = self.move_queue.pop(0)
-            self.target_position = Vec3(*next_pos)
-            self.is_moving = True
+            # 2️⃣  constant-fraction easing (no move_speed needed)
+            print(f"Moving {self.drone_entity} toward {dest}")
+            step_fraction = 0.10          # 10 % of the remaining gap each frame
+            self.drone_entity.position += gap * step_fraction
 
     def move_to(self, position):
-        # Add the position to the move queue
-        self.move_queue.append(position)
+        x, y, z = position
 
-        # If not currently moving, start moving immediately
-        if not self.is_moving and not self.target_position:
-            next_pos = self.move_queue.pop(0)
-            self.target_position = Vec3(*next_pos)
-            self.is_moving = True
+        # Clamp Y to terrain height if needed
+        ray_origin = Vec3(x, 100, z)
+        hit_info = raycast(ray_origin, Vec3(0, -1, 0), distance=200)
+
+        min_offset = 0.2
+        if hit_info.hit:
+            terrain_y = hit_info.world_point.y
+            y = max(y, terrain_y + min_offset)
+
+        self.target_position = Vec3(x, y, z)
+        self.is_moving = True

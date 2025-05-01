@@ -8,7 +8,6 @@ from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
 from utils.vector import Vector
-from GUIdrone import GUIDrone
 
 SYS_GRAPH: DroneGraph = DroneGraph(
     # Edges are bi-directional
@@ -122,33 +121,40 @@ def update_egress_edges(node_id: int) -> None:
         update_graph_edge(edge[0], edge[1], edge[2])
 
 
-# TODO - Add logic for controller (location, multicast, etc.)
-
-
-def main(q: Queue) -> None:
+def main(positions_queue, drones_queue):
     global DRONE_LIST, SYS_GRAPH
     register_controller()
-    register_drones()  # ex: [Drone(0, 3, 3, 3), Drone(1, 3, -3, -3), Drone(2, -3, 3, -3), Drone(3, -3, -3, 3)]
+    register_drones()
     populate_graph()
 
     drone_field = Field(10, 10, 10, DRONE_LIST)
-    drone_field.randomly_place_drones()  # Randomly place drones in field
+    drone_field.randomly_place_drones()
     update_graph_edges()
 
-    gui_drones = q.get()
+    # Send randomly placed positions to GUI and signal they're ready
+    drone_positions = [(d.get_x(), d.get_y(), d.get_z()) for d in DRONE_LIST]
+    print("RF: Sending positions:", drone_positions)
+    positions_queue.put(drone_positions)
+    
+    # Wait for GUI to process and send back drone objects
+    print("RF: Waiting for GUI drones")
+    gui_drones = drones_queue.get()
+    print("RF: Received GUI drones")
 
+    # === Continue simulation ===
     while not drone_field.drones_are_equidistant(SYS_GRAPH, CONTROLLER.get_location()):
         print("STILL NOT EQUIDISTANT")
         drone_field.space_drones(SYS_GRAPH, update_egress_edges)
-        sleep(0.01)
+        sleep(0.09)
+
         for index, drone in enumerate(SYS_GRAPH.nodes()):
             drone = cast(Drone, drone)
             gui_drones[index].move_to((drone.get_x(), drone.get_y(), drone.get_z()))
+            print(f"Drone {index} moved to: {drone.get_x()}, {drone.get_y()}, {drone.get_z()}")
 
         print(SYS_GRAPH)
 
     print("EQUIDISTANT!")
-
 
 if __name__ == "__main__":
     main()
