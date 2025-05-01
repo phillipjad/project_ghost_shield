@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.11"
 
 [[package]]
@@ -608,7 +609,7 @@ dependencies = [
     { name = "ruff" },
 ]
 wheels = [
-    { filename = "socket_lib-0.1.0-py3-none-any.whl", hash = "sha256:2e87bc3ba91a7d3eb35ce8b7af2a410d0622de08e055f19270de5d758f742d3e" },
+    { filename = "socket_lib-0.1.0-py3-none-any.whl", hash = "sha256:4301b1e069d3970fe463d6c60f88cf5d3c5fcce62fe1adb5a3c64f6e762adb28" },
 ]
 
 [package.metadata]

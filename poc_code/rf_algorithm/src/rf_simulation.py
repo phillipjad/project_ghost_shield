@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import math
 import multiprocessing as mp
 import random
 import signal
@@ -81,8 +82,9 @@ def register_controller(controller_vector: Vector) -> bool:
 
 def check_drones_registered(return_list: list[int]) -> None:
     try:
-        num_drones_registered = CONTROLLER_RECV_QUEUE.get(block=False)
+        num_drones_registered = CONTROLLER_RECV_QUEUE.get()
         return_list.append(num_drones_registered)
+        return
     except Exception:
         return
 
@@ -100,12 +102,9 @@ def register_drones() -> int:
 
     return_list: list[int] = []
     # Wait for drones to register
-    timeout = time.time() + REGISTRATION_TIMEOUT
-    while time.time() <= timeout:
-        if return_list:
-            break
-        Thread(target=check_drones_registered, args=[return_list], daemon=True).start()
-        sleep(0.1)
+    check_drones_registered_thread = Thread(target=check_drones_registered, args=[return_list], daemon=True)
+    check_drones_registered_thread.start()
+    check_drones_registered_thread.join(REGISTRATION_TIMEOUT)
     num_drones_registered = return_list[0] if return_list else 0
     print(f"Number of drones registered: {num_drones_registered}")
     return num_drones_registered == len(DRONES_CONFIG)
@@ -113,8 +112,9 @@ def register_drones() -> int:
 
 def check_location_response(return_list: list[tuple[float, float, float]]) -> None:
     try:
-        location_response = CONTROLLER_RECV_QUEUE.get(block=False)
+        location_response = CONTROLLER_RECV_QUEUE.get()
         return_list.append(location_response)
+        return
     except Exception:
         return
 
@@ -139,12 +139,9 @@ def get_drone_location(drone_id: str, drone_ip: str, drone_port: int) -> tuple[f
     )
 
     return_list = []
-    timeout = time.time() + 10
-    while time.time() <= timeout:
-        if return_list:
-            break
-        Thread(target=check_location_response, args=[return_list], daemon=True).start()
-        sleep(0.1)
+    check_location_thread = Thread(target=check_location_response, args=[return_list], daemon=True)
+    check_location_thread.start()
+    check_location_thread.join(10)
     drone_location = return_list[0] if return_list else None
     return drone_location
 
@@ -163,7 +160,7 @@ def get_drones(drones_config: list[dict]) -> dict[str, Drone]:
         for drone in drones_config
     }
 
-def move_drone(drone_id: str, x: float, y: float, z: float) -> None:
+def move_drone(drone: Drone, node_id: int, x: float, y: float, z: float) -> bool:
     """Move a drone to a new location.
 
     Args:
@@ -173,33 +170,28 @@ def move_drone(drone_id: str, x: float, y: float, z: float) -> None:
         z (float): The new z coordinate.
     """
     try:
-        drone = DRONE_MAP[drone_id]
-        d_index: int = [index for index, d in enumerate(DRONES_CONFIG) if d["id"] == drone.get_id()][0]
-        ip: str = DRONES_CONFIG[d_index]["ip"]
-        port: str = DRONES_CONFIG[d_index]["port"]
         CONTROLLER_SEND_QUEUE.put(
             (
                 MSG_STR_INT_MAP.get(MSG_STR_E.MOVE_LOCATION),
                 [CONTROLLER_CONFIG["id"], x, y, z],
-                [ip, port],
+                [drone.drone_tcp_ip, drone.drone_tcp_port],
             )
         )
         return_list = []
-        timeout = time.time() + 10
-        while time.time() <= timeout:
-            if return_list:
-                break
-            Thread(target=check_location_response, args=[return_list], daemon=True).start()
-            sleep(0.1)
+        check_location_thread = Thread(target=check_location_response, args=[return_list], daemon=True)
+        check_location_thread.start()
+        check_location_thread.join(10)
         drone_location = return_list[0] if return_list else None
         if drone_location:
             x, y, z = drone_location
             drone.set_x(x)
             drone.set_y(y)
             drone.set_z(z)
+            update_egress_edges(node_id)
+            return True
     except Exception as e:
         print(f"Error moving drone {drone.get_id()}: {e}")
-        return
+        return False
 
 
 def populate_graph(refresh: bool = False) -> True:
@@ -274,7 +266,6 @@ def update_graph_edge(node1_id: int, node2_id: int, edge_data: Distance) -> None
 
 def update_egress_edges(node_id: int) -> None:
     global SYS_GRAPH
-
     edges: list[tuple[int, int, Distance]] = SYS_GRAPH.out_edges(node_id)
     for edge in edges:
         update_graph_edge(edge[0], edge[1], edge[2])
@@ -291,15 +282,22 @@ def drones_are_equidistant(controller_location: Vector) -> bool:
 
     return distances.count(distances[0]) == len(distances)
 
-def space_drones(field_vector: Vector) -> None:
+def apply_rf_algorithm(field_vector: Vector) -> None:
     global SYS_GRAPH
 
     x_size, y_size, z_size = field_vector.get_internals_as_tuple()
-    repulsion_strength = 2.0  # how strong the repulsion is
+    max_repulsion_strength = 50.0  # maximum rep
+    min_repulsion_strength = 1  # minimum repulsion strength
+    repulsion_strength = max_repulsion_strength
     damping = 0.15  # how much of the force to apply
-    min_distance = 1.0  # minimum distance between drones
+    min_distance = 0.1  # minimum distance between drones
+    last_move_map: dict[int, tuple[float, float, float]] = {}
+    finished_ids: set[int] = set()
+    iterations: int = 0
 
     for out_id in SYS_GRAPH.node_indices():
+        if out_id in finished_ids:  # skip if already processed
+            continue
         force_vector = Vector(0.0, 0.0, 0.0)  # there is no force initially
 
         for in_id in SYS_GRAPH.node_indices():
@@ -324,12 +322,20 @@ def space_drones(field_vector: Vector) -> None:
             SYS_GRAPH.get_node_data(out_id).get_z() + force_vector_components[2] * damping
         )  # calculate the new z coordinate
 
-        SYS_GRAPH.get_node_data(out_id).set_x(max(0, min(x_size, new_x)))
-        SYS_GRAPH.get_node_data(out_id).set_y(max(0, min(y_size, new_y)))
-        if z_size:
-            SYS_GRAPH.get_node_data(out_id).set_z(max(0, min(z_size, new_z)))
-        damping += 0.5 if damping < 10 else 5
-        update_egress_edges(out_id)
+        print(f'Moving drone {out_id} to ({max(0, min(new_x, x_size))}, {max(0, min(new_y, y_size))}, {max(0, min(new_z, z_size))})')
+        if (out_id not in last_move_map) or (
+            last_move_map[out_id] != (max(0, min(new_x, x_size)), max(0, min(new_y, y_size)), max(0, min(new_z, z_size)))
+        ):
+            if move_drone(SYS_GRAPH.get_node_data(out_id), out_id, max(0, min(new_x, x_size)), max(0, min(new_y, y_size)), max(0, min(new_z, z_size))):
+                repulsion_strength = repulsion_strength if iterations <= 30 else max(min_repulsion_strength, repulsion_strength * math.exp(-0.001 * iterations))
+                damping = max(0.5, 2.0 * math.exp(-0.02 * iterations))
+                last_move_map[out_id] = (max(0, min(new_x, x_size)), max(0, min(new_y, y_size)), max(0, min(new_z, z_size)))
+        else:
+            finished_ids.add(out_id)
+        iterations += 1
+        print(last_move_map)
+        print(finished_ids)
+
 
 def enable_jamming(duration: float) -> None:
     CONTROLLER_SEND_QUEUE.put(
@@ -340,21 +346,20 @@ def enable_jamming(duration: float) -> None:
         )
     )
 
-def check_jamming_response(return_list: list[bool]) -> None:
+def check_jamming_response(return_list: list[bool], num_drones: int) -> None:
     try:
         jamming_response = CONTROLLER_RECV_QUEUE.get(block=False)
         return_list.append(jamming_response)
+        if (len(return_list) == num_drones) and all(return_list):
+            return
     except Exception:
         return
 
 def check_drones_are_jamming() -> None:
     return_list = []
-    timeout = time.time() + 10
-    while time.time() <= timeout:
-        if len(return_list) == len(DRONES_CONFIG):
-            break
-        Thread(target=check_jamming_response, args=[return_list], daemon=True).start()
-        sleep(0.1)
+    check_jamming_thread = Thread(target=check_jamming_response, args=[return_list, len(DRONES_CONFIG)], daemon=True)
+    check_jamming_thread.start()
+    check_jamming_thread.join(10)
     jamming_status = return_list[0] if return_list else False
     if jamming_status:
         print(f"Jamming status: {jamming_status}")
@@ -405,21 +410,16 @@ def main(release: bool) -> None:
         if not populate_graph():
             raise RuntimeError("Failed to populate graph")
 
-        print(SYS_GRAPH)
-
         # Randomize locations of drones
         for idx, drone in enumerate(SYS_GRAPH.nodes()):
             drone = cast(Drone, drone)
-            move_drone(drone.get_id(), random.random() + controller_vector.x, random.random() + controller_vector.y, random.random() + controller_vector.z)
-            update_egress_edges(idx)
+            move_drone(drone, idx, random.random() + controller_vector.x, random.random() + controller_vector.y, random.random() + controller_vector.z)
 
-
-        print(SYS_GRAPH)
 
         while not drones_are_equidistant(controller_vector):
-            space_drones(field_dimensions)
+            apply_rf_algorithm(field_dimensions)
             print("STILL NOT EQUIDISTANT")
-            print(SYS_GRAPH)
+            # print(SYS_GRAPH)
 
         # Drones are equidistant, so now we can enable jamming
         print("EQUIDISTANT!")

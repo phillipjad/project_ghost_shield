@@ -21,7 +21,7 @@ class MulticastServer:
         self.sock.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(self.group)
         )
-        self.sock.setblocking(False)
+        self.sock.setblocking(True)
 
     def send_message(self, msg: bytes) -> None:
         with self.lock:

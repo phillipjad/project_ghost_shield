@@ -11,8 +11,8 @@ class CurrentLocation(MsgObject):
 
     @staticmethod
     def deserialize(payload: bytes, offset: int = 0) -> tuple[int, "CurrentLocation"]:
-        x, y, z = struct.unpack_from("!fff", payload, offset)
-        offset += 4
+        x, y, z = struct.unpack_from("!ddd", payload, offset)
+        offset += 24
         return (offset, CurrentLocation(x, y, z))
 
     def serialize(self) -> bytes:

@@ -37,9 +37,9 @@ ignore= [
 ]
 
 [tool.uv.sources]
-socket-lib = { path = "pl/socket_lib-0.1.0-py3-none-any.whl" }
 module-wifi = { path = "pl/module_wifi-0.1.0-py3-none-any.whl" }
 module-gps = { path = "pl/module_gps-0.1.0-py3-none-any.whl" }
+socket-lib = { path = "pl/socket_lib-0.1.0-py3-none-any.whl" }
 
 [tool.ruff]
 line-length = 120

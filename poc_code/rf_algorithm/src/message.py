@@ -65,7 +65,7 @@ class Message:
     def get_curr_loc_msg(d_id: str, x: float, y: float, z: float) -> SignedMessage:
         msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.CURRENT_LOCATION)
 
-        payload: bytes = struct.pack("!fff", x, y, z)
+        payload: bytes = struct.pack("!ddd", x, y, z)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
         msg = struct.pack(f"!{len(header)}s{len(payload)}s", header, payload)
         return Message.sign_and_crc(msg)
@@ -74,7 +74,7 @@ class Message:
     def get_move_location(d_id: str, x: float, y: float, z: float) -> SignedMessage:
         msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.MOVE_LOCATION)
 
-        payload: bytes = struct.pack("!fff", x, y, z)
+        payload: bytes = struct.pack("!ddd", x, y, z)
         header: bytes = Header(d_id, msg_type, len(payload)).to_bytes()
         msg = struct.pack(f"!{len(header)}s{len(payload)}s", header, payload)
         return Message.sign_and_crc(msg)
