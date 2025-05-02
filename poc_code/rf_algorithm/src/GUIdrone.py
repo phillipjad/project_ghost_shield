@@ -25,14 +25,10 @@ class GUIDrone:
         if hit_info.hit:
             terrain_height = hit_info.world_point.y
             ground_y = terrain_height + min_height_offset
-            print(
-                f"Drone at ({x}, {y}, {z}): Terrain height = {terrain_height}, Placing at {ground_y}")
         else:
             # Fallback with a safe height
             # Use at least 2 units, or the original y if higher
             ground_y = max(2, y)
-            print(
-                f"Raycast failed for drone at ({x}, {y}, {z}). Using fallback height {ground_y}")
 
         # Position the drone at the safer ground position
         ground_position = Vec3(x, ground_y, z)
@@ -63,21 +59,17 @@ class GUIDrone:
             gap = dest - cur
             dist = gap.length()
 
-            # 1️⃣  close-enough snap
             if dist < 0.01:
-                print(f"{self.drone_entity} reached {dest}")
                 self.drone_entity.position = dest
                 self.is_moving = False
                 self.target_position = None
                 return
 
-            # 2️⃣  constant-fraction easing (no move_speed needed)
-            print(f"Moving {self.drone_entity} toward {dest}")
-            step_fraction = 0.10          # 10 % of the remaining gap each frame
+            step_fraction = 0.009          # 10 % of the remaining gap each frame
             self.drone_entity.position += gap * step_fraction
 
     def move_to(self, position):
-        x, y, z = position
+        x, y, z  = position
 
         # Clamp Y to terrain height if needed
         ray_origin = Vec3(x, 100, z)
@@ -88,5 +80,5 @@ class GUIDrone:
             terrain_y = hit_info.world_point.y
             y = max(y, terrain_y + min_offset)
 
-        self.target_position = Vec3(x, y, z)
+        self.target_position = Vec3(x, z, y)
         self.is_moving = True

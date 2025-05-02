@@ -56,7 +56,7 @@ class Controller:
             conn, _ = self.tcp_rec_sock.accept()
             listener_thread = Thread(target=conn.listen, args=[ack_queue], daemon=True)
             listener_thread.start()
-            listener_thread.join(timeout=0.5)
+            listener_thread.join(timeout=3)
             conn.disconnect()
 
     def process(self, internal_msg_queue: Queue, controller_send_queue: Queue) -> None:
@@ -156,10 +156,9 @@ class Controller:
                         enable_jammer_thread.join()
                         jammer_reset_timer.join()
                     elif msg_type == MSG_STR_INT_MAP[MSG_STR_E.RETURN_TO_LAUNCH]:
-                        drone_id, ip, port = args
                         rtl_thread = Thread(
                             target=send_return_to_launch,
-                            args=[drone_id, ip, port, self.location, self.id, self.tcp_send_sock],
+                            args=[*extra_var, self.location, self.id, self.tcp_send_sock],
                             daemon=True
                         )
                         rtl_thread.start()

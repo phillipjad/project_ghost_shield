@@ -1,4 +1,6 @@
-from multiprocessing import Queue
+from queue import Queue
+from threading import Thread
+import multiprocessing as mp
 from typing import cast   # Change this import
 from ursina import time, window
 from ursina import *
@@ -6,13 +8,14 @@ from time import sleep
 import json
 from environment import Environment
 from GUIdrone import GUIDrone
+from rf_simulation import main as rf_algorithm_exec
 
 
 class Enviroment_Manager:
     instance = None
 
     def __init__(self):
-        window.size = (800, 600)
+        window.size = (2560, 1440)
         self.app = Ursina()
         self.environment = None
         self.drones: dict[str, GUIDrone] = {}
@@ -42,26 +45,21 @@ class Enviroment_Manager:
             )
             self.drones[drone_config["id"]] = drone
 
-    def run(self, movement_queue: Queue, initialize_queue: Queue):
+    def run(self, PROCESS_LIST: list[mp.Process]):
         # Create an update entity that will run every frame
         updater = Entity()
 
-        # RF simulation thread is now started from rf_simulation.py
         # Just call setup to process the positions
         self.setup()
 
-        def update_function():
-            # Process any movement commands in the queue
-            try:
-                while not movement_queue.empty():
-                    drone_id, x, y, z = movement_queue.get_nowait()
-                    if drone_id in self.drones:
-                        print(
-                            f"GUI: Moving drone {drone_id} to ({x}, {y}, {z})")
-                        self.drones[drone_id].move_to((x, y, z))
-            except Exception as e:
-                print(f"Error processing movement commands: {e}")
+        rf_thread = Thread (
+            target=rf_algorithm_exec,
+            args=(False, self.drones, PROCESS_LIST),
+            daemon=True,
+        )
+        rf_thread.start()
 
+        def update_function():
             # Regular updates for all drones
             for drone in self.drones.values():
                 drone.update(time.dt)
@@ -71,6 +69,5 @@ class Enviroment_Manager:
 
         updater.update = update_function
 
-        initialize_queue.put("done")
         # Don't forget to actually run the app!
         self.app.run()

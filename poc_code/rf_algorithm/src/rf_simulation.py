@@ -6,10 +6,10 @@ import multiprocessing as mp
 import random
 import signal
 import time
-from multiprocessing import Queue
+from queue import Queue
 from threading import Thread
 from typing import cast
-import simulation
+from GUIdrone import GUIDrone
 
 from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
 from constants.path_constants import SYSTEM_CONFIG_PATH
@@ -43,22 +43,11 @@ SYS_GRAPH: DroneGraph = DroneGraph(
 REGISTRATION_TIMEOUT = SYSTEM_CONFIG["timeout_s"]
 CONTROLLER_SEND_QUEUE = Queue()
 CONTROLLER_RECV_QUEUE = Queue()
-PROCESS_LIST: list[mp.Process] = []
 DRONE_MAP: dict[str, Drone] = {}
 
 
-def sig_handler(sig: any, frame: any) -> None:
-    for p in PROCESS_LIST:
-        if p.is_alive():
-            p.terminate()
-    for p in PROCESS_LIST:
-        p.join()
-    exit(0)
-
 
 def register_controller(controller_vector: Vector) -> bool:
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-    signal.signal(signal.SIGTERM, signal.SIG_IGN)
     try:
         ctllr_thread = Thread(
             target=start_controller_thread,
@@ -76,9 +65,6 @@ def register_controller(controller_vector: Vector) -> bool:
         return True
     except Exception:
         return False
-    finally:
-        signal.signal(signal.SIGINT, sig_handler)
-        signal.signal(signal.SIGTERM, sig_handler)
 
 
 def check_drones_registered(return_list: list[int]) -> None:
@@ -106,7 +92,7 @@ def register_drones() -> int:
     check_drones_registered_thread = Thread(
         target=check_drones_registered, args=[return_list], daemon=True)
     check_drones_registered_thread.start()
-    check_drones_registered_thread.join(REGISTRATION_TIMEOUT)
+    check_drones_registered_thread.join(REGISTRATION_TIMEOUT + 10)
     num_drones_registered = return_list[0] if return_list else 0
     print(f"Number of drones registered: {num_drones_registered}")
     return num_drones_registered == len(DRONES_CONFIG)
@@ -301,6 +287,7 @@ def all_drones_stable(last_move_map: dict[str, tuple[float, float, float]], thre
         for x, y, z in last_move_map.values()
     )
 
+# Sorry for the ugly anonymous function, but I am a JS/TS native and I like it this way :) -PM
 def clamp_position_to_radius(vector: Vector, controller_vector: Vector, force_function: callable = lambda ic, f, d: calculate_force_severe_dropoff(ic, f, d), max_radius: float = 30.0) -> Vector:
     to_controller = vector.vector_sum(controller_vector.as_negated())
     if to_controller.get_magnitude() > max_radius:
@@ -372,6 +359,7 @@ def apply_rf_algorithm(
     controller_vector: Vector,
     last_move_map: dict[str, tuple[float, float, float]],
     finished_ids: set[int],
+    gui_drones: dict[str, GUIDrone],
 ) -> None:
     global SYS_GRAPH
 
@@ -440,24 +428,14 @@ def apply_rf_algorithm(
                     max_z_bound,
                 )
 
-        print(f"Drone {out_id} moving to {new_location.get_internals_as_tuple()}")
-        if (out_id not in last_move_map) or (last_move_map.get(out_id) != new_location.get_internals_as_tuple()):
-            if move_drone(SYS_GRAPH.get_node_data(out_id), out_id, *new_location.get_internals_as_tuple()):
-                repulsion_strength = max(min_repulsion_strength, repulsion_strength * math.exp(-0.001 * iterations))
-                # damping = max(0.5, 2.0 * math.exp(-0.02 * iterations))
-                last_move_map[out_id] = new_location.get_internals_as_tuple()
-        print(
-            f'Moving drone {out_id} to {new_location.get_internals_as_tuple()}')
         if (out_id not in last_move_map) or (
             last_move_map[out_id] != new_location.get_internals_as_tuple()
         ):
             if move_drone(SYS_GRAPH.get_node_data(out_id), out_id, *new_location.get_internals_as_tuple()):
-                # Instead of calling gui_drone.move_to directly:
-                # Queue the movement command with drone index and clamped coordinates
-                movement_queue.put((SYS_GRAPH.get_node_data(out_id).get_id(), *new_location.get_internals_as_tuple()))
+                drone_id = SYS_GRAPH.get_node_data(out_id).get_id()
+                gui_drones[drone_id].move_to(new_location.get_internals_as_tuple())
 
                 repulsion_strength = max(min_repulsion_strength, repulsion_strength * math.exp(-0.001 * iterations))
-                # damping = max(0.5, 2.0 * math.exp(-0.02 * iterations))
                 last_move_map[out_id] = new_location.get_internals_as_tuple()
         elif new_location.get_internals_as_tuple() not in last_move_map.values():
             finished_ids.add(out_id)
@@ -494,7 +472,7 @@ def check_drones_are_jamming() -> None:
     print(f"Jamming status: {jamming_status}")
 
 
-def main(release: bool) -> None:
+def main(release: bool, gui_drones: dict[str, GUIDrone], PROCESS_LIST: list[mp.Process]) -> None:
     global SYS_GRAPH
     controller_vector: Vector
     if release:
@@ -508,9 +486,6 @@ def main(release: bool) -> None:
     field_dimensions = Vector(FIELD_CONFIG["x"], FIELD_CONFIG["y"], FIELD_CONFIG["z"])
     operational_ceiling: int = SYSTEM_CONFIG["operational_ceiling"]
     temperature: float = max(field_dimensions.x, field_dimensions.y, operational_ceiling) / 10.0
-
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-    signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
     try:
         for drone_config in DRONES_CONFIG:
@@ -530,9 +505,6 @@ def main(release: bool) -> None:
             PROCESS_LIST.append(drone_process)
             drone_process.start()
 
-        signal.signal(signal.SIGINT, sig_handler)
-        signal.signal(signal.SIGTERM, sig_handler)
-
 
         if not register_controller(controller_vector):
             raise RuntimeError("Failed to register controller")
@@ -544,18 +516,23 @@ def main(release: bool) -> None:
         # Randomize locations of drones
         for idx, drone in enumerate(SYS_GRAPH.nodes()):
             drone = cast(Drone, drone)
-            move_drone(
-                drone,
-                idx,
+            randomized_vector = Vector(
                 random.random() + controller_vector.x,
                 random.random() + controller_vector.y,
                 random.random() + controller_vector.z,
             )
+            move_drone(
+                drone,
+                idx,
+                *randomized_vector.get_internals_as_tuple()
+            )
+            gui_drones[SYS_GRAPH.get_node_data(idx).get_id()].move_to(randomized_vector.get_internals_as_tuple())
 
         s = time.perf_counter()
         while True:
-            apply_rf_algorithm(operational_ceiling, field_dimensions, controller_vector, last_move_map, finished_ids)
+            apply_rf_algorithm(operational_ceiling, field_dimensions, controller_vector, last_move_map, finished_ids, gui_drones)
             temperature = max(temperature * 0.9, 0.01)
+            time.sleep(1)
             if drones_are_spaced_properly(controller_vector, two_recent_distance_magnitudes, 0.5) or (
                 (two_recent_distance_magnitudes[0] > 0 and two_recent_distance_magnitudes[1] > 0)
                 or all_drones_stable(last_move_map, 0.1)
@@ -574,51 +551,11 @@ def main(release: bool) -> None:
             CONTROLLER_SEND_QUEUE.put((
                 MSG_STR_INT_MAP[MSG_STR_E.RETURN_TO_LAUNCH],
                 [CONTROLLER_CONFIG["id"]],
-                [drone.drone_tcp_ip, drone.drone_tcp_port],
+                [drone.id, drone.drone_tcp_ip, drone.drone_tcp_port],
             ))
 
         # Give drones time to return before shutdown (optional)
         while True:
             time.sleep(2)
-
-        sig_handler(None, None)
-    except KeyboardInterrupt:
-        sig_handler(None, None)
     except Exception as e:
-        print(f"Unhandled exception: {e}")
-        sig_handler(None, None)
-
-
-if __name__ == "__main__":
-    mp.set_start_method("spawn", force=True)
-    parser = argparse.ArgumentParser(
-        prog="Project Ghost Shield - RF Simulation",
-        description="***Proof of Concept Simulation for Project Ghost Shield***",
-    )
-    parser.add_argument(
-        "-r",
-        "--release",
-        action="store_true",
-        help="If flag is set to true, it runs the program in release mode instead of debug.",
-    )
-    args = parser.parse_args()
-    release = args.release
-    initialize_complete_q = mp.Queue()
-
-    # Start the GUI in a separate process
-    gui_process = mp.Process(
-        target=simulation.main,
-        args=[movement_queue, initialize_complete_q],
-        daemon=True
-    )
-    gui_process.start()
-    PROCESS_LIST.append(gui_process)
-
-    # Wait for the GUI to initialize
-    initialize_complete_q.get()
-
-    try:
-        # Run the RF algorithm in the main process
-        main(release)
-    except Exception as e:
-        print(f"Error in main RF thread: {e}")
+        raise e

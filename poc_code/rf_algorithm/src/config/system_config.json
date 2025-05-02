@@ -18,9 +18,9 @@
 
   "environment": {
     "dimensions": {
-      "x": 30,
+      "x": 50,
       "y": 4,
-      "z": 30
+      "z": 50
     },
     "assets": {
       "terrain_texture": "assets/grass.png",
@@ -32,8 +32,8 @@
     "unit_of_measurement": "m"
   },
   "system": {
-        "operational_ceiling": 5,
-    "timeout_s": 5,
+    "operational_ceiling": 5,
+    "timeout_s": 20,
     "private_key": "HGaIxZKzrGq8V9Cx4atMgEq5n3Sx2OHrl4KHmglhpLM=",
     "public_key": "jl1-5zvKoSnS0L8vRLhfxpkg49cR-UzH5wUuOrwBVjk="
   },

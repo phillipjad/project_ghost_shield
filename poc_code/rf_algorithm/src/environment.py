@@ -12,7 +12,6 @@ class Environment:
         self.drones = []
         self.drone_controllers = []
         self.camera_mode = 'first_person'  # Default camera mode
-        self.active_drone_index = 0  # Index of the currently displayed drone
 
     def setup(self):
         """Set up the environment with terrain and base entities"""
@@ -129,10 +128,6 @@ class Environment:
         }
 
 
-    def set_active_drone(self, drone):
-        """Set the drone to track and display coordinates for"""
-        self.active_drone = drone
-
     def update(self):
         if self.camera_mode == 'first_person':
             pos = self.player.position
@@ -141,7 +136,7 @@ class Environment:
 
         self.coords_text.text = f"Coords: ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})"
 
-        # Update drone coordinates if we have an active drone
-        if hasattr(self, 'active_drone') and self.active_drone and hasattr(self.active_drone, 'drone_entity'):
-            drone_pos = self.active_drone.drone_entity.position
-            self.drone_coords_text.text = f"Drone: ({drone_pos.x:.2f}, {drone_pos.y:.2f}, {drone_pos.z:.2f})"
+        # # Update drone coordinates if we have an active drone
+        # if hasattr(self, 'active_drone') and self.active_drone and hasattr(self.active_drone, 'drone_entity'):
+        #     drone_pos = self.active_drone.drone_entity.position
+        #     self.drone_coords_text.text = f"Drone: ({drone_pos.x:.2f}, {drone_pos.y:.2f}, {drone_pos.z:.2f})"
