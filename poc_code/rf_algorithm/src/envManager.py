@@ -1,4 +1,4 @@
-from threading import Thread
+from multiprocessing import Queue   # Change this import
 from ursina import time, window
 from ursina import *
 from time import sleep
@@ -6,7 +6,6 @@ import json
 from environment import Environment
 from GUIdrone import GUIDrone
 from rf_simulation import main as rf_main_func
-from queue import Queue
 
 positions_queue = Queue()  # RF -> GUI
 drones_queue = Queue()     # GUI -> RF

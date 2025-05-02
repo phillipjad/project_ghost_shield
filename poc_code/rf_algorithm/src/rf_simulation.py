@@ -476,21 +476,28 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     release = args.release
-    
-    # Start the environment manager in a separate thread
+
+    # Import here to avoid circular imports
     from envManager import positions_queue, drones_queue
     import simulation
 
-    # Start the GUI simulation in a separate thread
-    gui_thread = Thread(
+    # Start the GUI in a separate process
+    gui_process = mp.Process(
         target=simulation.main,
         daemon=True
     )
-    gui_thread.start()
+    gui_process.start()
 
     # Give the GUI time to initialize
     sleep(1)
 
-    # Run the RF algorithm in the main thread
-    # This will communicate with the GUI thread through the queues
-    main(release, positions_queue, drones_queue)
+    try:
+        # Run the RF algorithm in the main process
+        main(release, positions_queue, drones_queue)
+    except Exception as e:
+        print(f"Error in main RF thread: {e}")
+    finally:
+        # Clean up the GUI process when done
+        if gui_process.is_alive():
+            gui_process.terminate()
+            gui_process.join()
