@@ -12,9 +12,9 @@ def input(key):
             env.toggle_camera()
 
 
-def main(drones_queue: Queue, positions_queue: Queue):
+def main(drones_queue: Queue, positions_queue: Queue, movement_queue: Queue):
     manager = Enviroment_Manager()
-    manager.run(drones_queue, positions_queue)
+    manager.run(drones_queue, positions_queue, movement_queue)
 
 
 if __name__ == '__main__':

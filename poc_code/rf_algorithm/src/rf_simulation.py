@@ -487,7 +487,7 @@ if __name__ == "__main__":
     # Start the GUI in a separate process
     gui_process = mp.Process(
         target=simulation.main,
-        args=[drones_queue, positions_queue],
+        args=[drones_queue, positions_queue, movement_queue],
         daemon=True
     )
     gui_process.start()
