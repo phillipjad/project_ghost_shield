@@ -32,7 +32,6 @@ class Field:
 
         return distances.count(distances[0]) == len(distances)
 
-
     def __str__(self) -> str:
         return f"""
             Field with dimensions: [{self.x_size}, {self.y_size}, {self.z_size}]

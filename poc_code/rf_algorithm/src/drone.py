@@ -1,6 +1,6 @@
+import time
 from queue import Queue
 from threading import Thread
-import time
 
 from nacl.signing import SignedMessage
 from socket_lib.multicast_client import MulticastClient
@@ -192,9 +192,7 @@ class Drone:
                 enable_jammer_msg = Message.deserialize_msg(msg)
                 duration: float = enable_jammer_msg.payload.duration
                 jamming_thread = Thread(
-                    target=send_jamming_msg,
-                    args=[self.id, self.mcast_send_sock, duration],
-                    daemon=True
+                    target=send_jamming_msg, args=[self.id, self.mcast_send_sock, duration], daemon=True
                 )
                 jamming_thread.start()
                 jamming_thread.join(duration)
@@ -229,6 +227,7 @@ class Drone:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
 
     # checks if two drones are equal by id, x, y, and z
+<<<<<<< HEAD
     def __eq__(self, other) -> bool:
         """Compares two Drone objects for equality based on their id and coordinates.
 
@@ -239,14 +238,12 @@ class Drone:
         Returns:
             bool: True if the drones are equal (same id and coordinates), False otherwise.
         """        
+=======
+    def __eq__(self, other: any) -> bool:
+>>>>>>> implement_drone_multiprocessing
         if not isinstance(other, Drone):
             return False  # don't attempt to compare against unrelated types
-        if (
-            self.id == other.id
-            and self.x == other.get_x()
-            and self.y == other.get_y()
-            and self.z == other.get_z()
-        ):
+        if self.id == other.id and self.x == other.get_x() and self.y == other.get_y() and self.z == other.get_z():
             return True
         return False
 
@@ -267,6 +264,7 @@ def send_ack(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, time
     tcp_socket.send_message(msg)
     tcp_socket.disconnect()
 
+
 def send_jamming_msg(drone_id: str, mcast_send_sock: MulticastServer, duration: float) -> None:
     """Sends a jamming message to the drone for a given duration.
 
@@ -279,6 +277,7 @@ def send_jamming_msg(drone_id: str, mcast_send_sock: MulticastServer, duration: 
     while time.time() <= timeout:
         msg = Message.serialize_msg(MSG_STR_INT_MAP[MSG_STR_E.JAMMER_ENABLED], [drone_id])
         mcast_send_sock.send_message(msg)
+
 
 def start_drone_process(
     id: str,

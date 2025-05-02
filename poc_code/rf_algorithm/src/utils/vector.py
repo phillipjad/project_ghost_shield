@@ -1,4 +1,5 @@
 import math
+from collections.abc import Callable
 
 
 class Vector:
@@ -119,7 +120,12 @@ class Vector:
         """
         return Vector((-1 * self.x), (-1 * self.y), (-1 * self.z))
 
-    def calculate_force(self, min_distance: float, repulsion_strength: float) -> "Vector":
+    def calculate_force(
+        self,
+        min_distance: float,
+        repulsion_strength: float,
+        force_function: Callable[[tuple[float, float, float], float, float], "Vector"],
+    ) -> "Vector":
         """Calculates a force vector based on the calling Vector's internal state,
         and a passed repulsion_strength. min_distance parameter ensures that at least
         a minimal change occurs.
@@ -127,6 +133,8 @@ class Vector:
         Args:
             min_distance (float): Minimum distance that distance should be calculated as.
             repulsion_strength (float): Strength of repulsive force.
+            force_function (Callable): Function to use to calculate the force vector.
+                Should take the calling Vector's internal state, the force, and the distance as parameters.
 
         Returns:
             Vector: Force vector calculated from the calling Vector's internal state and the provided repulsion_strength parameter.
@@ -138,8 +146,4 @@ class Vector:
         # the closer the 2 drones the stronger the force
         force = repulsion_strength / math.pow(distance, 2)
 
-        return Vector(
-            ((inner_components[0] / distance) * force),
-            ((inner_components[1] / distance) * force),
-            ((inner_components[2] / distance) * force),
-        )
+        return force_function(inner_components, force, distance)

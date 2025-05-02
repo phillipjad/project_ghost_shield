@@ -119,7 +119,7 @@ class Controller:
                 controller_send_queue.put((x, y, z))
             elif Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.JAMMER_ENABLED]:
                 if Message.get_source_id(msg) not in self.drone_jamming_map:
-                    self.drone_jamming_map[Message.get_source_id(msg)] = True 
+                    self.drone_jamming_map[Message.get_source_id(msg)] = True
                     controller_send_queue.put(True)
 
     def send_num_drones_registered(self, controller_send_queue: Queue) -> None:
@@ -195,6 +195,17 @@ class Controller:
                         jammer_reset_timer.start()
                         enable_jammer_thread.join()
                         jammer_reset_timer.join()
+                    elif msg_type == MSG_STR_INT_MAP[MSG_STR_E.RETURN_TO_LAUNCH]:
+                        drone_id, ip, port = args
+                        rtl_thread = Thread(
+                            target=send_return_to_launch,
+                            args=[drone_id, ip, port, self.location, self.id, self.tcp_send_sock],
+                            daemon=True
+                        )
+                        rtl_thread.start()
+                        rtl_thread.join()
+
+
 
 def send_jammer_message(msg: SignedMessage, socket: MulticastServer) -> None:
     """Sends a jamming message to the multicast server.
@@ -206,6 +217,7 @@ def send_jammer_message(msg: SignedMessage, socket: MulticastServer) -> None:
     for _ in range(3):
         socket.send_message(msg)
         time.sleep(0.1)
+
 
 def send_move_location_message(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int) -> None:
     """Sends a move location message to the drone.
@@ -228,6 +240,7 @@ def send_move_location_message(msg: SignedMessage, tcp_socket: TCPSocket, ip: st
         print(f"Drone at {ip}:{port} did not respond with an ACK")
         return
     tcp_socket.disconnect()
+
 
 def send_registration_message(msg: SignedMessage, socket: MulticastServer, timeout: int = 10) -> None:
     """Broadcasts a registration message to the multicast server.
@@ -284,6 +297,12 @@ def send_ack(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, time
     # Send ack
     tcp_socket.send_message(msg)
     tcp_socket.disconnect()
+
+def send_return_to_launch(drone_id: str, ip: str, port: int, controller_location: Vector, controller_id: str, tcp_socket: TCPSocket) -> None:
+    """Sends a move command to bring the drone back to the controller's location."""
+    x, y, z = controller_location.get_internals_as_tuple()
+    rtl_msg = Message.get_move_location(controller_id, x, y, z)
+    send_move_location_message(rtl_msg, tcp_socket, ip, port)
 
 
 def start_controller_thread(
