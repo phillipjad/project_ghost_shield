@@ -56,7 +56,7 @@ class Controller:
             conn, _ = self.tcp_rec_sock.accept()
             listener_thread = Thread(target=conn.listen, args=[ack_queue], daemon=True)
             listener_thread.start()
-            listener_thread.join(timeout=3)
+            listener_thread.join(timeout=0.5)
             conn.disconnect()
 
     def process(self, internal_msg_queue: Queue, controller_send_queue: Queue) -> None:
@@ -158,7 +158,7 @@ class Controller:
                     elif msg_type == MSG_STR_INT_MAP[MSG_STR_E.RETURN_TO_LAUNCH]:
                         rtl_thread = Thread(
                             target=send_return_to_launch,
-                            args=[*extra_var, self.location, self.id, self.tcp_send_sock],
+                            args=[*extra_var, self.location, self.id, self.tcp_send_sock, controller_send_queue],
                             daemon=True
                         )
                         rtl_thread.start()
@@ -218,11 +218,12 @@ def send_ack(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, time
     tcp_socket.send_message(msg)
     tcp_socket.disconnect()
 
-def send_return_to_launch(drone_id: str, ip: str, port: int, controller_location: Vector, controller_id: str, tcp_socket: TCPSocket) -> None:
+def send_return_to_launch(drone_id: str, ip: str, port: int, controller_location: Vector, controller_id: str, tcp_socket: TCPSocket, controller_send_queue: Queue) -> None:
     """Sends a move command to bring the drone back to the controller's location."""
     x, y, z = controller_location.get_internals_as_tuple()
     rtl_msg = Message.get_move_location(controller_id, x, y, z)
     send_move_location_message(rtl_msg, tcp_socket, ip, port)
+    controller_send_queue.put((x, y, z))
 
 
 def start_controller_thread(

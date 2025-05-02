@@ -5,6 +5,7 @@ import math
 import multiprocessing as mp
 import random
 import signal
+import sys
 import time
 from queue import Queue
 from threading import Thread
@@ -359,7 +360,7 @@ def apply_rf_algorithm(
     controller_vector: Vector,
     last_move_map: dict[str, tuple[float, float, float]],
     finished_ids: set[int],
-    gui_drones: dict[str, GUIDrone],
+    gui_drones: dict[str, GUIDrone] | None = None,
 ) -> None:
     global SYS_GRAPH
 
@@ -431,9 +432,11 @@ def apply_rf_algorithm(
         if (out_id not in last_move_map) or (
             last_move_map[out_id] != new_location.get_internals_as_tuple()
         ):
+            print(f'Moving drone {out_id} to {new_location.get_internals_as_tuple()}')
             if move_drone(SYS_GRAPH.get_node_data(out_id), out_id, *new_location.get_internals_as_tuple()):
                 drone_id = SYS_GRAPH.get_node_data(out_id).get_id()
-                gui_drones[drone_id].move_to(new_location.get_internals_as_tuple())
+                if gui_drones:
+                    gui_drones[drone_id].move_to(new_location.get_internals_as_tuple())
 
                 repulsion_strength = max(min_repulsion_strength, repulsion_strength * math.exp(-0.001 * iterations))
                 last_move_map[out_id] = new_location.get_internals_as_tuple()
@@ -472,13 +475,13 @@ def check_drones_are_jamming() -> None:
     print(f"Jamming status: {jamming_status}")
 
 
-def main(release: bool, gui_drones: dict[str, GUIDrone], PROCESS_LIST: list[mp.Process]) -> None:
+def main(release: bool, gui_drones: dict[str, GUIDrone] | None = None, PROCESS_LIST: list[mp.Process] | None = None) -> None:
     global SYS_GRAPH
     controller_vector: Vector
     if release:
         controller_vector = Vector(*wifi_locator.get_xyz_from_ip())
     else:
-        controller_vector = Vector(5, 5, 5)
+        controller_vector = Vector(0, 0, 10)
     print(f"Controller location: {controller_vector.get_internals_as_tuple()}")
     last_move_map: dict[str, tuple[float, float, float]] = {}
     finished_ids: set[int] = set()
@@ -502,7 +505,8 @@ def main(release: bool, gui_drones: dict[str, GUIDrone], PROCESS_LIST: list[mp.P
                     CONTROLLER_CONFIG["port"],
                 ],
             )
-            PROCESS_LIST.append(drone_process)
+            if PROCESS_LIST:
+                PROCESS_LIST.append(drone_process)
             drone_process.start()
 
 
@@ -526,7 +530,8 @@ def main(release: bool, gui_drones: dict[str, GUIDrone], PROCESS_LIST: list[mp.P
                 idx,
                 *randomized_vector.get_internals_as_tuple()
             )
-            gui_drones[SYS_GRAPH.get_node_data(idx).get_id()].move_to(randomized_vector.get_internals_as_tuple())
+            if gui_drones:
+                gui_drones[SYS_GRAPH.get_node_data(idx).get_id()].move_to(randomized_vector.get_internals_as_tuple())
 
         s = time.perf_counter()
         while True:
@@ -541,21 +546,54 @@ def main(release: bool, gui_drones: dict[str, GUIDrone], PROCESS_LIST: list[mp.P
         print(f"Time taken to space: {time.perf_counter() - s:.2f} seconds")
 
 
-        print("Spaced! Begin jamming")
+        print("Spaced! Beginning jamming")
         enable_jamming(10.0)
 
         check_drones_are_jamming()
 
+        time.sleep(10.0)
         print("Returning all drones to controller's location...")
-        for drone in DRONE_MAP.values():
-            CONTROLLER_SEND_QUEUE.put((
-                MSG_STR_INT_MAP[MSG_STR_E.RETURN_TO_LAUNCH],
-                [CONTROLLER_CONFIG["id"]],
-                [drone.id, drone.drone_tcp_ip, drone.drone_tcp_port],
-            ))
 
+        for idx, drone in enumerate(SYS_GRAPH.nodes()):
+            drone = cast(Drone, drone)
+            return_vector = Vector(
+                controller_vector.x,
+                controller_vector.y,
+                controller_vector.z,
+            )
+            move_drone(
+                drone,
+                idx,
+                *return_vector.get_internals_as_tuple()
+            )
+            if gui_drones:
+                gui_drones[SYS_GRAPH.get_node_data(idx).get_id()].move_to(randomized_vector.get_internals_as_tuple())
         # Give drones time to return before shutdown (optional)
         while True:
             time.sleep(2)
     except Exception as e:
         raise e
+    
+if __name__ == '__main__':
+    try:
+        mp.set_start_method("spawn", force=True)
+        signal.signal(signal.SIGINT, lambda sig, frame: sys.exit(0))
+        signal.signal(signal.SIGTERM, lambda sig, frame: sys.exit(0))
+
+        parser = argparse.ArgumentParser(
+            prog="Project Ghost Shield - RF Simulation",
+            description="***Proof of Concept Simulation for Project Ghost Shield***",
+        )
+        parser.add_argument(
+            "-r",
+            "--release",
+            action="store_true",
+            help="If flag is set to true, it runs the program in release mode instead of debug.",
+        )
+        args = parser.parse_args()
+        release = args.release
+        main(release)
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        print(f"Unhandled exception: {e}")
