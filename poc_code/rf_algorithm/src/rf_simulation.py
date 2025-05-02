@@ -432,7 +432,8 @@ def apply_rf_algorithm(
         if (out_id not in last_move_map) or (
             last_move_map[out_id] != new_location.get_internals_as_tuple()
         ):
-            print(f'Moving drone {out_id} to {new_location.get_internals_as_tuple()}')
+            if not gui_drones:
+                print(f'Moving drone {out_id} to {new_location.get_internals_as_tuple()}')
             if move_drone(SYS_GRAPH.get_node_data(out_id), out_id, *new_location.get_internals_as_tuple()):
                 drone_id = SYS_GRAPH.get_node_data(out_id).get_id()
                 if gui_drones:
