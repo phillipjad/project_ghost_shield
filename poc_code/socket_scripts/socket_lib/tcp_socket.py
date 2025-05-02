@@ -1,14 +1,13 @@
-import socket
 import selectors
+import socket
 from queue import Queue
-from typing import Optional
 from threading import Lock
 
 
 class TCPSocket:
     def __init__(self) -> None:
-        self.sock: Optional[socket.socket] = None
-        self.sel: Optional[selectors.DefaultSelector] = None
+        self.sock: socket.socket | None = None
+        self.sel: selectors.DefaultSelector | None = None
         self.running = False
         self.lock = Lock()
 
@@ -16,7 +15,6 @@ class TCPSocket:
         if self.sock:
             self.disconnect()  # Disconnect first if already connected
         with self.lock:
-
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.setblocking(True)
 
@@ -85,7 +83,7 @@ class TCPSocket:
                 self.sel = None
                 self.sock = None
 
-    def bind_and_listen(self, ip: str, port: int):
+    def bind_and_listen(self, ip: str, port: int) -> None:
         if self.sock:
             self.disconnect()
         with self.lock:
@@ -96,13 +94,15 @@ class TCPSocket:
             self.sock.listen()
             self.running = False
 
-    def accept(self):
+    def accept(self) -> tuple["TCPSocket", tuple[str, int]]:
         with self.lock:
             conn, addr = self.sock.accept()
             conn.setblocking(True)
             new_conn = TCPSocket()
             new_conn.sock = conn
             new_conn.sel = selectors.DefaultSelector()
-            new_conn.sel.register(new_conn.sock, selectors.EVENT_READ, new_conn.receive_message)
+            new_conn.sel.register(
+                new_conn.sock, selectors.EVENT_READ, new_conn.receive_message
+            )
             new_conn.running = True
             return new_conn, addr

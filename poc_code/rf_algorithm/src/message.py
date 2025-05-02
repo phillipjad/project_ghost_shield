@@ -19,10 +19,10 @@ from message_objects.enable_jammer import EnableJammer
 from message_objects.enable_reg import EnableRegistration
 from message_objects.enable_rf_deception import EnableRFDeception
 from message_objects.get_location import GetLocation
-from message_objects.move_location import MoveLocation
-from message_objects.msg_obj_abc import MsgObject
 from message_objects.jammer_disabled import JammerDisabled
 from message_objects.jammer_enabled import JammerEnabled
+from message_objects.move_location import MoveLocation
+from message_objects.msg_obj_abc import MsgObject
 
 
 class Message:
@@ -147,7 +147,7 @@ class Message:
         header: bytes = Header(d_id, msg_type, 0).to_bytes()
         msg = struct.pack(f"!{len(header)}s", header)
         return Message.sign_and_crc(msg)
-    
+
     @staticmethod
     def get_jammer_enabled(d_id: str) -> SignedMessage:
         msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.JAMMER_ENABLED)
@@ -234,7 +234,7 @@ class Message:
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload = CommandAck.deserialize(msg[HEADER_SIZE_BYTES:])[1]
         return Message(header, payload)
-    
+
     @staticmethod
     def jammer_enabled(msg: SignedMessage) -> "Message":
         msg = Message.check_crc_and_signature(msg)

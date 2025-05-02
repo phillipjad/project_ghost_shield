@@ -8,8 +8,9 @@ import signal
 import time
 from queue import Queue
 from threading import Thread
-from time import sleep
 from typing import cast
+
+from wifi_lib import wifi_locator
 
 from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
 from constants.path_constants import SYSTEM_CONFIG_PATH
@@ -20,7 +21,6 @@ from utils.distance_obj import Distance
 from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
 from utils.vector import Vector
-from wifi_lib import wifi_locator
 
 # CONSTANTS
 SYS_GRAPH: DroneGraph = DroneGraph(
@@ -156,9 +156,12 @@ def get_drones(drones_config: list[dict]) -> dict[str, Drone]:
         dict[str, Drone]: Dictionary of drone IDs and their corresponding Drone objects.
     """
     return {
-        drone["id"]: Drone(drone["id"], *get_drone_location(drone["id"], drone["ip"], drone["port"]), drone["ip"], drone["port"], False)
+        drone["id"]: Drone(
+            drone["id"], *get_drone_location(drone["id"], drone["ip"], drone["port"]), drone["ip"], drone["port"], False
+        )
         for drone in drones_config
     }
+
 
 def move_drone(drone: Drone, node_id: int, x: float, y: float, z: float) -> bool:
     """Move a drone to a new location.
@@ -271,31 +274,110 @@ def update_egress_edges(node_id: int) -> None:
         update_graph_edge(edge[0], edge[1], edge[2])
 
 
-def drones_are_equidistant(controller_location: Vector) -> bool:
+def drones_are_spaced_properly(controller_location: Vector, two_recent_distance_magnitudes: list[float, float]) -> bool:
     global SYS_GRAPH
 
+    magnitude_sum: float = 0.0
     distances: list[Distance] = []
-    for i in SYS_GRAPH.edges():
-        i = cast(Distance, i)
-        distance = i.distance_between_vectors_using_abs(controller_location)
+    for i in SYS_GRAPH.nodes():
+        drone_location: Vector = Vector(i.get_x(), i.get_y(), i.get_z())
+        distance = drone_location.as_abs().distance_between_vector(controller_location)
+        magnitude_sum += drone_location.as_abs().get_magnitude()
         distances.append(distance)
 
+    two_recent_distance_magnitudes[0] = two_recent_distance_magnitudes[1]
+    two_recent_distance_magnitudes[1] = magnitude_sum
     return distances.count(distances[0]) == len(distances)
 
-def apply_rf_algorithm(field_vector: Vector) -> None:
+
+def calculate_force_severe_dropoff(
+    inner_components: tuple[float, float, float], distance: float, force: float
+) -> Vector:
+    """Calculates a force vector based on the calling Vector's internal state,
+
+    Args:
+        inner_components (tuple[float, float, float]): Tuple of the x, y, z components of the vector.
+        distance (float): The distance between the two vectors.
+        force (float): The force to apply.
+
+    Returns:
+        Vector: A vector with the force applied in the direction of the inner components.
+    """
+    return Vector(
+        ((inner_components[0] / distance) * force),
+        ((inner_components[1] / distance) * force),
+        ((inner_components[2] / distance) * force),
+    )
+
+
+def calculate_force_soft_dropoff(inner_components: tuple[float, float, float], distance: float, force: float) -> Vector:
+    """Calculates a force vector based on the calling Vector's internal state,
+
+    Args:
+        inner_components (tuple[float, float, float]): Tuple of the x, y, z components of the vector.
+        distance (float): The distance between the two vectors.
+        force (float): The force to apply.
+
+    Returns:
+        Vector: A vector with the force applied in the direction of the inner components.
+    """
+    return Vector(
+        ((inner_components[0] / math.sqrt(distance + 1e-6)) * force),
+        ((inner_components[1] / math.sqrt(distance + 1e-6)) * force),
+        ((inner_components[2] / math.sqrt(distance + 1e-6)) * force),
+    )
+
+
+def calculate_force_log_dropoff(inner_components: tuple[float, float, float], distance: float, force: float) -> Vector:
+    """Calculates a force vector based on the calling Vector's internal state,
+
+    Args:
+        inner_components (tuple[float, float, float]): Tuple of the x, y, z components of the vector.
+        distance (float): The distance between the two vectors.
+        force (float): The force to apply.
+
+    Returns:
+        Vector: A vector with the force applied in the direction of the inner components.
+    """
+    return Vector(
+        ((inner_components[0] / math.log1p(distance)) * force),
+        ((inner_components[1] / math.log1p(distance)) * force),
+        ((inner_components[2] / math.log1p(distance)) * force),
+    )
+
+
+def apply_rf_algorithm(
+    operational_ceiling: int,
+    field_vector: Vector,
+    controller_vector: Vector,
+    last_move_map: dict[str, tuple[float, float, float]],
+    finished_ids: set[int],
+) -> None:
     global SYS_GRAPH
 
-    x_size, y_size, z_size = field_vector.get_internals_as_tuple()
-    max_repulsion_strength = 50.0  # maximum rep
+    controller_x, controller_y, controller_z = controller_vector.get_internals_as_tuple()
+    field_x, field_y, _field_z = field_vector.get_internals_as_tuple()
+    min_x_bound = controller_x - field_x / 2
+    min_y_bound = controller_y - field_y / 2
+    max_x_bound = controller_x + field_x / 2
+    max_y_bound = controller_y + field_y / 2
+    max_z_bound = controller_z + operational_ceiling
+    max_repulsion_strength = 5.0  # maximum rep
     min_repulsion_strength = 1  # minimum repulsion strength
     repulsion_strength = max_repulsion_strength
-    damping = 0.15  # how much of the force to apply
+    damping = 0.5  # how much of the force to apply
     min_distance = 0.1  # minimum distance between drones
-    last_move_map: dict[int, tuple[float, float, float]] = {}
-    finished_ids: set[int] = set()
+    collision_min_distance = ((field_x * field_y * (max_z_bound - operational_ceiling)) / SYS_GRAPH.num_nodes())**(1/3)
     iterations: int = 0
 
     for out_id in SYS_GRAPH.node_indices():
+        force_function: callable
+        if (len(finished_ids) < (SYS_GRAPH.num_nodes()/4)):
+            force_function = calculate_force_log_dropoff
+        elif (len(finished_ids) < (SYS_GRAPH.num_nodes()/2)):
+            force_function = calculate_force_soft_dropoff
+        else:
+            force_function = calculate_force_severe_dropoff
         if out_id in finished_ids:  # skip if already processed
             continue
         force_vector = Vector(0.0, 0.0, 0.0)  # there is no force initially
@@ -309,7 +391,7 @@ def apply_rf_algorithm(field_vector: Vector) -> None:
             if edge_data.get_last_to_write() != out_id:
                 distance_vector = distance_vector.as_negated()
 
-            curr_force_vector = distance_vector.calculate_force(min_distance, repulsion_strength)
+            curr_force_vector = distance_vector.calculate_force(collision_min_distance, repulsion_strength, force_function)
             force_vector.mutating_vector_sum(curr_force_vector)
         force_vector_components = force_vector.get_internals_as_tuple()
         new_x = (
@@ -318,23 +400,35 @@ def apply_rf_algorithm(field_vector: Vector) -> None:
         new_y = (
             SYS_GRAPH.get_node_data(out_id).get_y() + force_vector_components[1] * damping
         )  # calculate the new y coordinate
-        new_z = (
-            SYS_GRAPH.get_node_data(out_id).get_z() + force_vector_components[2] * damping
-        )  # calculate the new z coordinate
 
-        print(f'Moving drone {out_id} to ({max(0, min(new_x, x_size))}, {max(0, min(new_y, y_size))}, {max(0, min(new_z, z_size))})')
-        if (out_id not in last_move_map) or (
-            last_move_map[out_id] != (max(0, min(new_x, x_size)), max(0, min(new_y, y_size)), max(0, min(new_z, z_size)))
-        ):
-            if move_drone(SYS_GRAPH.get_node_data(out_id), out_id, max(0, min(new_x, x_size)), max(0, min(new_y, y_size)), max(0, min(new_z, z_size))):
-                repulsion_strength = repulsion_strength if iterations <= 30 else max(min_repulsion_strength, repulsion_strength * math.exp(-0.001 * iterations))
-                damping = max(0.5, 2.0 * math.exp(-0.02 * iterations))
-                last_move_map[out_id] = (max(0, min(new_x, x_size)), max(0, min(new_y, y_size)), max(0, min(new_z, z_size)))
-        else:
+        new_location = Vector(
+            max(min_x_bound, min(new_x, max_x_bound)), max(min_y_bound, min(new_y, max_y_bound)), max_z_bound
+        )
+
+        collision = False
+        for in_id in SYS_GRAPH.node_indices():
+            if out_id == in_id:
+                continue
+            other_drone = SYS_GRAPH.get_node_data(in_id)
+            other_location = Vector(other_drone.get_x(), other_drone.get_y(), other_drone.get_z())
+            if new_location.distance_between_vector(other_location) < collision_min_distance:
+                collision = True
+                break
+
+        if collision:
+            print(f"Collision detected for drone {out_id}. Skipping move.")
+            continue
+
+
+        print(f"Drone {out_id} moving to {new_location.get_internals_as_tuple()}")
+        if (out_id not in last_move_map) or (last_move_map.get(out_id) != new_location.get_internals_as_tuple()):
+            if move_drone(SYS_GRAPH.get_node_data(out_id), out_id, *new_location.get_internals_as_tuple()):
+                repulsion_strength = max(min_repulsion_strength, repulsion_strength * math.exp(-0.001 * iterations))
+                # damping = max(0.5, 2.0 * math.exp(-0.02 * iterations))
+                last_move_map[out_id] = new_location.get_internals_as_tuple()
+        elif new_location.get_internals_as_tuple() not in last_move_map.values():
             finished_ids.add(out_id)
         iterations += 1
-        print(last_move_map)
-        print(finished_ids)
 
 
 def enable_jamming(duration: float) -> None:
@@ -346,14 +440,16 @@ def enable_jamming(duration: float) -> None:
         )
     )
 
+
 def check_jamming_response(return_list: list[bool], num_drones: int) -> None:
     try:
-        jamming_response = CONTROLLER_RECV_QUEUE.get(block=False)
+        jamming_response = CONTROLLER_RECV_QUEUE.get()
         return_list.append(jamming_response)
         if (len(return_list) == num_drones) and all(return_list):
             return
     except Exception:
         return
+
 
 def check_drones_are_jamming() -> None:
     return_list = []
@@ -361,19 +457,20 @@ def check_drones_are_jamming() -> None:
     check_jamming_thread.start()
     check_jamming_thread.join(10)
     jamming_status = return_list[0] if return_list else False
-    if jamming_status:
-        print(f"Jamming status: {jamming_status}")
+    print(f"Jamming status: {jamming_status}")
 
 
 def main(release: bool) -> None:
     global SYS_GRAPH
+    controller_vector: Vector
     if release:
-        controller_vector = Vector(
-            *wifi_locator.get_xyz_from_ip()
-        )
+        controller_vector = Vector(*wifi_locator.get_xyz_from_ip())
     else:
         controller_vector = Vector(5, 5, 5)
     print(f"Controller location: {controller_vector.get_internals_as_tuple()}")
+    last_move_map: dict[str, tuple[float, float, float]] = {}
+    finished_ids: set[int] = set()
+    two_recent_distance_magnitudes: list[float, float] = [-1.0, -2.0]
 
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -399,9 +496,8 @@ def main(release: bool) -> None:
         signal.signal(signal.SIGINT, sig_handler)
         signal.signal(signal.SIGTERM, sig_handler)
 
-        field_dimensions = Vector(
-            FIELD_CONFIG["x"], FIELD_CONFIG["y"], FIELD_CONFIG["z"]
-        )
+        field_dimensions = Vector(FIELD_CONFIG["x"], FIELD_CONFIG["y"], FIELD_CONFIG["z"])
+        operational_ceiling: int = SYSTEM_CONFIG["operational_ceiling"]
 
         if not register_controller(controller_vector):
             raise RuntimeError("Failed to register controller")
@@ -413,16 +509,24 @@ def main(release: bool) -> None:
         # Randomize locations of drones
         for idx, drone in enumerate(SYS_GRAPH.nodes()):
             drone = cast(Drone, drone)
-            move_drone(drone, idx, random.random() + controller_vector.x, random.random() + controller_vector.y, random.random() + controller_vector.z)
+            move_drone(
+                drone,
+                idx,
+                random.random() + controller_vector.x,
+                random.random() + controller_vector.y,
+                random.random() + controller_vector.z,
+            )
 
-
-        while not drones_are_equidistant(controller_vector):
-            apply_rf_algorithm(field_dimensions)
-            print("STILL NOT EQUIDISTANT")
-            # print(SYS_GRAPH)
+        s = time.perf_counter()
+        while not drones_are_spaced_properly(controller_vector, two_recent_distance_magnitudes) and (
+            two_recent_distance_magnitudes[0] != two_recent_distance_magnitudes[1]
+        ):
+            apply_rf_algorithm(operational_ceiling, field_dimensions, controller_vector, last_move_map, finished_ids)
+        print(f"Time taken to space: {time.perf_counter() - s:.2f} seconds")
+        print(SYS_GRAPH)
 
         # Drones are equidistant, so now we can enable jamming
-        print("EQUIDISTANT!")
+        print("Spaced! Begin jamming")
         enable_jamming(10.0)
 
         check_drones_are_jamming()

@@ -79,7 +79,7 @@ class Controller:
                 controller_send_queue.put((x, y, z))
             elif Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.JAMMER_ENABLED]:
                 if Message.get_source_id(msg) not in self.drone_jamming_map:
-                    self.drone_jamming_map[Message.get_source_id(msg)] = True 
+                    self.drone_jamming_map[Message.get_source_id(msg)] = True
                     controller_send_queue.put(True)
 
     def send_num_drones_registered(self, controller_send_queue: Queue) -> None:
@@ -156,10 +156,12 @@ class Controller:
                         enable_jammer_thread.join()
                         jammer_reset_timer.join()
 
+
 def send_jammer_message(msg: SignedMessage, socket: MulticastServer) -> None:
     for _ in range(3):
         socket.send_message(msg)
         time.sleep(0.1)
+
 
 def send_move_location_message(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int) -> None:
     ack: SignedMessage | None = None
@@ -174,6 +176,7 @@ def send_move_location_message(msg: SignedMessage, tcp_socket: TCPSocket, ip: st
         print(f"Drone at {ip}:{port} did not respond with an ACK")
         return
     tcp_socket.disconnect()
+
 
 def send_registration_message(msg: SignedMessage, socket: MulticastServer, timeout: int = 10) -> None:
     timeout = time.time() + timeout

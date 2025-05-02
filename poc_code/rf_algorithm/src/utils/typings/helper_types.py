@@ -29,8 +29,10 @@ class SensorsConfig(TypedDict):
 
 
 class SystemConfig(TypedDict):
+    operation_ceiling: int
     timeout_s: int
     signing_key: str
+    public_key: str
 
 
 class FieldConfig(TypedDict):
