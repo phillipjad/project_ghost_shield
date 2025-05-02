@@ -43,7 +43,6 @@ SYS_GRAPH: DroneGraph = DroneGraph(
     FIELD_CONFIG,
 ) = load_system_config(SYSTEM_CONFIG_PATH)
 
-get_location: callable = None
 REGISTRATION_TIMEOUT = SYSTEM_CONFIG["timeout_s"]
 CONTROLLER_SEND_QUEUE = Queue()
 CONTROLLER_RECV_QUEUE = Queue()
@@ -491,6 +490,7 @@ if __name__ == "__main__":
         daemon=True
     )
     gui_process.start()
+    PROCESS_LIST.append(gui_process)
 
     # Give the GUI time to initialize
     sleep(1)
@@ -500,8 +500,3 @@ if __name__ == "__main__":
         main(release, positions_queue, drones_queue)
     except Exception as e:
         print(f"Error in main RF thread: {e}")
-    finally:
-        # Clean up the GUI process when done
-        if gui_process.is_alive():
-            gui_process.terminate()
-            gui_process.join()
