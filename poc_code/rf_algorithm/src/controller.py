@@ -155,6 +155,16 @@ class Controller:
                         jammer_reset_timer.start()
                         enable_jammer_thread.join()
                         jammer_reset_timer.join()
+                    elif msg_type == MSG_STR_INT_MAP[MSG_STR_E.RETURN_TO_LAUNCH]:
+                        drone_id, ip, port = args
+                        rtl_thread = Thread(
+                            target=send_return_to_launch,
+                            args=[drone_id, ip, port, self.location, self.id, self.tcp_send_sock],
+                            daemon=True
+                        )
+                        rtl_thread.start()
+                        rtl_thread.join()
+
 
 
 def send_jammer_message(msg: SignedMessage, socket: MulticastServer) -> None:
@@ -208,6 +218,12 @@ def send_ack(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, time
     # Send ack
     tcp_socket.send_message(msg)
     tcp_socket.disconnect()
+
+def send_return_to_launch(drone_id: str, ip: str, port: int, controller_location: Vector, controller_id: str, tcp_socket: TCPSocket) -> None:
+    """Sends a move command to bring the drone back to the controller's location."""
+    x, y, z = controller_location.get_internals_as_tuple()
+    rtl_msg = Message.get_move_location(controller_id, x, y, z)
+    send_move_location_message(rtl_msg, tcp_socket, ip, port)
 
 
 def start_controller_thread(
