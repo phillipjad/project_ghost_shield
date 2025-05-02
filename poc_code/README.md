@@ -18,7 +18,7 @@
 	Run 'pipx ensurepath'
 
 do this in git bash:
-- Setting up uv environment (run this in PROJECT_GHOST_SHIELD -> poc_code -> multicast_client)
+- Setting up uv environment (run this in project_ghost_shield -> poc_code -> multicast_client)
 	- After installing uv run `uv venv --python 3.11`
 	- Run `source .venv/Scripts/activate`
 	- Your uv venv should now be setup as indicated by the environment name surrounded by parentheses in your terminal ![[Pasted image 20250124145031.png]]
