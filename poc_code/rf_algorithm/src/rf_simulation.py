@@ -405,20 +405,19 @@ def apply_rf_algorithm(
             max(min_x_bound, min(new_x, max_x_bound)), max(min_y_bound, min(new_y, max_y_bound)), max_z_bound
         )
 
-        collision = False
         for in_id in SYS_GRAPH.node_indices():
             if out_id == in_id:
                 continue
             other_drone = SYS_GRAPH.get_node_data(in_id)
             other_location = Vector(other_drone.get_x(), other_drone.get_y(), other_drone.get_z())
-            if new_location.distance_between_vector(other_location) < collision_min_distance:
-                collision = True
-                break
-
-        if collision:
-            print(f"Collision detected for drone {out_id}. Skipping move.")
-            continue
-
+            while new_location.distance_between_vector(other_location) < collision_min_distance:
+                num_drones = SYS_GRAPH.num_nodes()
+                attempted_x, attempted_y, _ = new_location.get_internals_as_tuple()
+                new_location = Vector(
+                    max(min_x_bound, min(attempted_x + random.uniform(-(field_x / num_drones), field_x / num_drones), max_x_bound)),
+                    max(min_y_bound, min(attempted_y + random.uniform(-(field_y / num_drones), field_y / num_drones), max_y_bound)),
+                    max_z_bound,
+                )
 
         print(f"Drone {out_id} moving to {new_location.get_internals_as_tuple()}")
         if (out_id not in last_move_map) or (last_move_map.get(out_id) != new_location.get_internals_as_tuple()):
