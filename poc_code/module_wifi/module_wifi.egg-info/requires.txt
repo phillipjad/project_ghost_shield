@@ -1,0 +1,6 @@
+ruff~=0.9.3
+comtypes>=1.4.10
+dotenv>=0.9.9
+geocoder>=1.38.1
+pywifi>=1.1.12
+requests>=2.32.3

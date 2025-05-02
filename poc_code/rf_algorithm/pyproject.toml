@@ -9,9 +9,13 @@ authors = [
 requires-python = ">=3.11"
 
 dependencies = [
-    "panda3d==1.10.15",
+    "crc32c>=2.7.1",
+    "module-gps",
+    "module-wifi",
+    "pynacl>=1.5.0",
     "ruff~=0.9.3",
     "rustworkx~=0.16.0",
+    "socket-lib",
 ]
 
 [tool.ruff.lint]
@@ -29,5 +33,13 @@ select = [
 ]
 
 ignore= [
-    "E501" # Line too long. Let ruff format handle
+    "E501", # Line too long. Let ruff format handle
 ]
+
+[tool.uv.sources]
+module-wifi = { path = "pl/module_wifi-0.1.0-py3-none-any.whl" }
+module-gps = { path = "pl/module_gps-0.1.0-py3-none-any.whl" }
+socket-lib = { path = "pl/socket_lib-0.1.0-py3-none-any.whl" }
+
+[tool.ruff]
+line-length = 120

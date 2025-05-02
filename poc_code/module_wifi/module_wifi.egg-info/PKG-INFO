@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: module-wifi
+Version: 0.1.0
+Summary: Wifi location module
+Author-email: Phillip Dickey <pdickey@gmu.edu>
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: ruff~=0.9.3
+Requires-Dist: comtypes>=1.4.10
+Requires-Dist: dotenv>=0.9.9
+Requires-Dist: geocoder>=1.38.1
+Requires-Dist: pywifi>=1.1.12
+Requires-Dist: requests>=2.32.3

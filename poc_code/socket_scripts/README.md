@@ -1,4 +1,4 @@
-### Multicast Scripts Files
+### Socket Library Classes
 
 - multicast_client.py
     - Used to receive messages sent over multicast.

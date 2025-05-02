@@ -1,3 +1,14 @@
+from queue import Queue
+from threading import Thread
+import time
+
+from nacl.signing import SignedMessage
+from socket_lib.multicast_client import MulticastClient
+from socket_lib.multicast_server import MulticastServer
+from socket_lib.tcp_socket import TCPSocket
+
+from constants.messaging_constants import MSG_INT_STR_MAP, MSG_STR_E, MSG_STR_INT_MAP
+from message import Message
 from utils.vector import Vector
 
 
@@ -5,12 +16,27 @@ class Drone:
     """Class representing a rudimentary drone. Capable of moving and broadcasting location"""
 
     def __init__(
-        self, id: str, x_coordinate: float, y_coordinate: float, z_coordinate: float
+        self,
+        id: str,
+        x_coordinate: float,
+        y_coordinate: float,
+        z_coordinate: float,
+        drone_tcp_ip: str,
+        drone_tcp_port: int,
+        is_process: bool = True,
+        port: int = 50000,
     ) -> None:
         self.id = id
         self.x = x_coordinate
         self.y = y_coordinate
         self.z = z_coordinate
+        self.drone_tcp_ip = drone_tcp_ip
+        self.drone_tcp_port = drone_tcp_port
+        if is_process:
+            self.mcast_send_sock = MulticastServer(port=port)
+            self.mcast_rec_sock = MulticastClient(port=port)
+            self.tcp_send_sock = TCPSocket()
+            self.tcp_rec_sock = TCPSocket()
 
     def move_x(self, distance: float) -> None:
         self.x += distance
@@ -61,6 +87,91 @@ class Drone:
     def get_id(self) -> str:
         return self.id
 
+    def listen_udp(self, listener_queue: Queue) -> None:
+        self.mcast_rec_sock.listen(listener_queue)
+
+    def listen_tcp(self, listener_queue: Queue, ip: str, port: int) -> None:
+        self.tcp_rec_sock.bind_and_listen(ip=ip, port=port)
+        while True:
+            conn, _ = self.tcp_rec_sock.accept()
+            listener_thread = Thread(target=conn.listen, args=[listener_queue], daemon=True)
+            listener_thread.start()
+            listener_thread.join(timeout=0.5)
+            conn.disconnect()
+
+    def process(
+        self, listener_queue: Queue[bytes], internal_msg_queue: Queue, controller_tcp_ip: str, controller_tcp_port: int
+    ) -> None:
+        while (msg := listener_queue.get()) is not None:
+            if Message.get_source_id(msg) == self.id:
+                continue
+            if msg.startswith(b"ERROR"):
+                print("ERROR ENCOUNTERED!")
+                continue
+            if Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.GET_LOCATION]:
+                ack_msg = Message.serialize_msg(MSG_STR_INT_MAP.get(MSG_STR_E.COMMAND_ACK), [self.id])
+                # Send quick ack
+                ack_thread = Thread(
+                    target=send_ack,
+                    args=[ack_msg, self.tcp_send_sock, controller_tcp_ip, controller_tcp_port],
+                )
+                ack_thread.start()
+
+                # Send location over multicast
+                internal_msg_queue.put(
+                    (
+                        MSG_STR_INT_MAP[MSG_STR_E.CURRENT_LOCATION],
+                        [self.id, self.x, self.y, self.z],
+                    )
+                )
+                ack_thread.join()
+            elif Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]:
+                internal_msg_queue.put((MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION), [self.id]))
+            elif Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.MOVE_LOCATION]:
+                # Send quick ack
+                ack_msg = Message.serialize_msg(MSG_STR_INT_MAP.get(MSG_STR_E.COMMAND_ACK), [self.id])
+                ack_thread = Thread(
+                    target=send_ack,
+                    args=[ack_msg, self.tcp_send_sock, controller_tcp_ip, controller_tcp_port],
+                )
+                ack_thread.start()
+                move_msg = Message.deserialize_msg(msg)
+                x: float = move_msg.payload.x
+                y: float = move_msg.payload.y
+                z: float = move_msg.payload.z
+                self.set_x(x)
+                self.set_y(y)
+                self.set_z(z)
+                internal_msg_queue.put(
+                    (
+                        MSG_STR_INT_MAP[MSG_STR_E.CURRENT_LOCATION],
+                        [self.id, self.x, self.y, self.z],
+                    )
+                )
+                ack_thread.join()
+            elif Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_JAMMER]:
+                enable_jammer_msg = Message.deserialize_msg(msg)
+                duration: float = enable_jammer_msg.payload.duration
+                jamming_thread = Thread(
+                    target=send_jamming_msg,
+                    args=[self.id, self.mcast_send_sock, duration],
+                    daemon=True
+                )
+                jamming_thread.start()
+                jamming_thread.join(duration)
+            else:
+                pass
+                # print(f'Unknown {msg=}')
+
+    def main_thread_runner(self, internal_msg_queue: Queue[tuple[int, list]]) -> None:
+        """Main thread activity"""
+        # Blocks on .get()
+        while (command := internal_msg_queue.get()) is not None:
+            msg_type, args = command
+            if msg_type in MSG_INT_STR_MAP:
+                msg = Message.serialize_msg(msg_type, args)
+                self.mcast_send_sock.send_message(msg)
+
     def pretty_print(self) -> str:
         return f"Drone {self.id}"
 
@@ -75,33 +186,56 @@ class Drone:
     def __repr__(self) -> str:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
 
+    # checks if two drones are equal by id, x, y, and z
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Drone):
+            return False  # don't attempt to compare against unrelated types
+        if (
+            self.id == other.id
+            and self.x == other.get_x()
+            and self.y == other.get_y()
+            and self.z == other.get_z()
+        ):
+            return True
+        return False
 
-if __name__ == "__main__":
-    print("testing move_from_vector() method: ")
 
-    # Create two drone instances
-    drone1 = Drone("Alpha", 0.0, 0.0, 0.0)
-    drone2 = Drone("Beta", 3.0, 4.0, 0.0)
+def send_ack(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 1) -> None:
+    tcp_socket.connect(ip=ip, port=port)
+    # After connect we now have a socket. Add timeout
+    tcp_socket.sock.settimeout(timeout)
+    # Send ack
+    tcp_socket.send_message(msg)
+    tcp_socket.disconnect()
 
-    print("printing drone1 and drone2 before moving: ")
-    print(drone1)
-    print(drone2)
-    print()
+def send_jamming_msg(drone_id: str, mcast_send_sock: MulticastServer, duration: float) -> None:
+    """Sends a jamming message to the drone for a given duration"""
+    timeout = time.time() + duration
+    while time.time() <= timeout:
+        msg = Message.serialize_msg(MSG_STR_INT_MAP[MSG_STR_E.JAMMER_ENABLED], [drone_id])
+        mcast_send_sock.send_message(msg)
 
-    # Move the first drone
-    drone1.move_from_vector(Vector(-1.0, -1.0, -2.0))
+def start_drone_process(
+    id: str,
+    x: float,
+    y: float,
+    z: float,
+    drone_tcp_ip: str,
+    drone_tcp_port: int,
+    controller_tcp_ip: str,
+    controller_tcp_port: int,
+) -> None:
+    d = Drone(id, x, y, z, drone_tcp_ip, drone_tcp_port)
+    listener_queue: Queue[bytes] = Queue()
+    internal_msg_queue: Queue[tuple[int, list]] = Queue()
 
-    # Move the second drone
-    drone2.move_from_vector(Vector(3.0, -6.0, 2.0))
+    udp_listener_thread = Thread(target=d.listen_udp, args=[listener_queue], daemon=True)
+    processing_thread = Thread(
+        target=d.process, args=[listener_queue, internal_msg_queue, controller_tcp_ip, controller_tcp_port], daemon=True
+    )
+    tcp_listener_thread = Thread(target=d.listen_tcp, args=[listener_queue, drone_tcp_ip, drone_tcp_port], daemon=True)
+    udp_listener_thread.start()
+    tcp_listener_thread.start()
+    processing_thread.start()
 
-    print()
-    print("printing drone1 and drone2 after moving: ")
-    print(drone1)
-    print(drone2)
-    print()
-
-    # Calculate distance between them
-    drone_1_vec = Vector(drone1.get_x(), drone1.get_y(), drone1.get_z())
-    drone_2_vec = Vector(drone2.get_x(), drone2.get_y(), drone2.get_z())
-    distance = drone_1_vec.distance_between_vector(drone_2_vec)
-    print(f"Distance between drones: {distance}")
+    d.main_thread_runner(internal_msg_queue)
