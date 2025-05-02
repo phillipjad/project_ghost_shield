@@ -16,8 +16,6 @@ MSG_INT_STR_MAP: MappingProxyType[int, str] = {
     0x0A: "COMMAND_ACK",
     0x0B: "JAMMER_ENABLED",
     0x0C: "JAMMER_DISABLED",
-    0x0D: "RETURN_TO_LAUNCH",
-
 }
 
 MSG_STR_INT_MAP: MappingProxyType[str, int] = {
@@ -34,7 +32,6 @@ MSG_STR_INT_MAP: MappingProxyType[str, int] = {
     "COMMAND_ACK": 0x0A,
     "JAMMER_ENABLED": 0x0B,
     "JAMMER_DISABLED": 0x0C,
-    "RETURN_TO_LAUNCH": 0x0D,
 }
 
 
@@ -52,6 +49,3 @@ class MSG_STR_E(StrEnum):
     COMMAND_ACK = "COMMAND_ACK"
     JAMMER_ENABLED = "JAMMER_ENABLED"
     JAMMER_DISABLED = "JAMMER_DISABLED"
-    RETURN_TO_LAUNCH = "RETURN_TO_LAUNCH"
-
-
