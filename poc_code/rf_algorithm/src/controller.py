@@ -146,11 +146,12 @@ class Controller:
                 if msg_type in MSG_INT_STR_MAP:
                     msg = Message.serialize_msg(msg_type, args)
                     if msg_type == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]:
-                        Thread(
+                        send_reg_thread = Thread(
                             target=send_registration_message,
                             args=[msg, self.mcast_send_sock, extra_var - 0.5],
                             daemon=True,
-                        ).start()
+                        )
+                        send_reg_thread.start()
                         # Minus 0.5 so that we can be sure the main thread is responded to before it stops listening
                         main_thread_response_timer = Timer(
                             interval=extra_var - 0.5,
@@ -158,31 +159,42 @@ class Controller:
                             args=[controller_send_queue],
                         )
                         main_thread_response_timer.start()
+
+                        main_thread_response_timer.join()
+                        send_reg_thread.join()
                     elif msg_type == MSG_STR_INT_MAP[MSG_STR_E.GET_LOCATION]:
                         # Start thread to send location request to drone
-                        Thread(
+                        get_location_thread = Thread(
                             target=send_get_location_message,
                             args=[msg, self.tcp_send_sock, *extra_var],
                             daemon=True,
-                        ).start()
+                        )
+                        get_location_thread.start()
+                        get_location_thread.join()
                     elif msg_type == MSG_STR_INT_MAP[MSG_STR_E.MOVE_LOCATION]:
-                        Thread(
+                        move_location_thread = Thread(
                             target=send_move_location_message,
                             args=[msg, self.tcp_send_sock, *extra_var],
                             daemon=True,
-                        ).start()
+                        )
+                        move_location_thread.start()
+                        move_location_thread.join()
                     elif msg_type == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_JAMMER]:
                         # Start thread to send location request to drone
-                        Thread(
+                        enable_jammer_thread = Thread(
                             target=send_jammer_message,
                             args=[msg, self.mcast_send_sock],
                             daemon=True,
-                        ).start()
+                        )
+                        enable_jammer_thread.start()
                         # Reset jamming map after jamming concludes
-                        Timer(
+                        jammer_reset_timer = Timer(
                             interval=args[1] + 0.5,
                             function=lambda: self.drone_jamming_map.clear(),
-                        ).start()
+                        )
+                        jammer_reset_timer.start()
+                        enable_jammer_thread.join()
+                        jammer_reset_timer.join()
 
 def send_jammer_message(msg: SignedMessage, socket: MulticastServer) -> None:
     """Sends a jamming message to the multicast server.
@@ -209,7 +221,7 @@ def send_move_location_message(msg: SignedMessage, tcp_socket: TCPSocket, ip: st
     # After connect we now have a socket. Add timeout
     tcp_socket.send_message(msg)
     try:
-        ack = ack_queue.get(timeout=1)
+        ack = ack_queue.get(timeout=5)
     except Exception:
         pass
     if ack is None or Message.get_msg_type(ack) != MSG_STR_INT_MAP[MSG_STR_E.COMMAND_ACK]:
@@ -247,7 +259,7 @@ def send_get_location_message(msg: SignedMessage, tcp_socket: TCPSocket, ip: str
     tcp_socket.send_message(msg)
 
     try:
-        ack = ack_queue.get(timeout=1)
+        ack = ack_queue.get(timeout=5)
     except Exception:
         pass
     if ack is None or Message.get_msg_type(ack) != MSG_STR_INT_MAP[MSG_STR_E.COMMAND_ACK]:

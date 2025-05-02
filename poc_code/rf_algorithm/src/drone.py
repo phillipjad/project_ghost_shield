@@ -148,12 +148,13 @@ class Drone:
                 print("ERROR ENCOUNTERED!")
                 continue
             if Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.GET_LOCATION]:
-                msg = Message.serialize_msg(MSG_STR_INT_MAP.get(MSG_STR_E.COMMAND_ACK), [self.id])
+                ack_msg = Message.serialize_msg(MSG_STR_INT_MAP.get(MSG_STR_E.COMMAND_ACK), [self.id])
                 # Send quick ack
-                Thread(
+                ack_thread = Thread(
                     target=send_ack,
-                    args=[msg, self.tcp_send_sock, controller_tcp_ip, controller_tcp_port],
-                ).start()
+                    args=[ack_msg, self.tcp_send_sock, controller_tcp_ip, controller_tcp_port],
+                )
+                ack_thread.start()
 
                 # Send location over multicast
                 internal_msg_queue.put(
@@ -162,30 +163,41 @@ class Drone:
                         [self.id, self.x, self.y, self.z],
                     )
                 )
+                ack_thread.join()
             elif Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_REGISTRATION]:
                 internal_msg_queue.put((MSG_STR_INT_MAP.get(MSG_STR_E.CONFIRM_REGISTRATION), [self.id]))
             elif Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.MOVE_LOCATION]:
+                # Send quick ack
+                ack_msg = Message.serialize_msg(MSG_STR_INT_MAP.get(MSG_STR_E.COMMAND_ACK), [self.id])
+                ack_thread = Thread(
+                    target=send_ack,
+                    args=[ack_msg, self.tcp_send_sock, controller_tcp_ip, controller_tcp_port],
+                )
+                ack_thread.start()
                 move_msg = Message.deserialize_msg(msg)
                 x: float = move_msg.payload.x
                 y: float = move_msg.payload.y
                 z: float = move_msg.payload.z
-                self.move_x(x)
-                self.move_y(y)
-                self.move_z(z)
+                self.set_x(x)
+                self.set_y(y)
+                self.set_z(z)
                 internal_msg_queue.put(
                     (
                         MSG_STR_INT_MAP[MSG_STR_E.CURRENT_LOCATION],
                         [self.id, self.x, self.y, self.z],
                     )
                 )
+                ack_thread.join()
             elif Message.get_msg_type(msg) == MSG_STR_INT_MAP[MSG_STR_E.ENABLE_JAMMER]:
                 enable_jammer_msg = Message.deserialize_msg(msg)
                 duration: float = enable_jammer_msg.payload.duration
-                Thread(
+                jamming_thread = Thread(
                     target=send_jamming_msg,
                     args=[self.id, self.mcast_send_sock, duration],
                     daemon=True
-                ).start()
+                )
+                jamming_thread.start()
+                jamming_thread.join(duration)
             else:
                 pass
                 # print(f'Unknown {msg=}')
@@ -239,16 +251,7 @@ class Drone:
         return False
 
 
-def send_ack(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 2) -> None:
-    """Sends an acknowledgment message to the specified IP and port using a TCP socket.
-
-    Args:
-        msg (SignedMessage): message to be sent
-        tcp_socket (TCPSocket): TCP socket object used for sending the message
-        ip (str): IP address of the destination
-        port (int): Port number of the destination
-        timeout (int, optional): Timeout for the socket connection. Defaults to 2 seconds.
-    """    
+def send_ack(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 1) -> None:
     tcp_socket.connect(ip=ip, port=port)
     # After connect we now have a socket. Add timeout
     tcp_socket.sock.settimeout(timeout)

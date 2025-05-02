@@ -23,7 +23,7 @@ class MulticastClient:
         )
         self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
-        self.sock.setblocking(False)
+        self.sock.setblocking(True)
         self.sock.settimeout(5.0)
         self.sel.register(self.sock, selectors.EVENT_READ, self.receive_message)
 

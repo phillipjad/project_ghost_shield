@@ -22,17 +22,8 @@ class MoveLocation(MsgObject):
 
     @staticmethod
     def deserialize(payload: bytes, offset: int = 0) -> tuple[int, "MoveLocation"]:
-        """Deserializes a byte payload to extract a MoveLocation message.
-
-        Args:
-            payload (bytes): The byte stream to deserialize.
-            offset (int): Byte offset to begin deserialization (Defaults to 0).
-
-        Returns:
-            tuple[int, MoveLocation]: the new offset and a deserialized MoveLocation instance.
-        """        
-        x, y, z = struct.unpack_from("!fff", payload, offset)
-        offset += 4
+        x, y, z = struct.unpack_from("!ddd", payload, offset)
+        offset += 24
         return (offset, MoveLocation(x, y, z))
 
     def serialize(self) -> bytes:
