@@ -16,7 +16,6 @@ dependencies = [
     "ruff~=0.9.3",
     "rustworkx~=0.16.0",
     "socket-lib",
-    "ursina>=7.0.0",
 ]
 
 [tool.ruff.lint]
