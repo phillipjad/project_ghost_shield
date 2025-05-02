@@ -5,11 +5,6 @@ from time import sleep
 import json
 from environment import Environment
 from GUIdrone import GUIDrone
-from rf_simulation import main as rf_main_func
-
-positions_queue = Queue()  # RF -> GUI
-drones_queue = Queue()     # GUI -> RF
-
 
 class Enviroment_Manager:
     instance = None
@@ -25,7 +20,7 @@ class Enviroment_Manager:
         with open("config/system_config.json", "r") as f:
             self.config = json.load(f)
 
-    def setup(self):
+    def setup(self, drones_queue: Queue, positions_queue: Queue):
         env_cfg = self.config["environment"]
         dims = env_cfg["dimensions"]
         assets = env_cfg["assets"]
@@ -59,13 +54,13 @@ class Enviroment_Manager:
 
         drones_queue.put(self.drones)
 
-    def run(self):
+    def run(self, drones_queue: Queue, positions_queue: Queue):
         # Create an update entity that will run every frame
         updater = Entity()
 
         # RF simulation thread is now started from rf_simulation.py
         # Just call setup to process the positions
-        self.setup()
+        self.setup(drones_queue, positions_queue)
 
         def update_function():
             # Regular updates for all drones

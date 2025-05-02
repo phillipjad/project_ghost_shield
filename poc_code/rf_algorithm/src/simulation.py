@@ -1,3 +1,4 @@
+from multiprocessing import Queue
 from envManager import Enviroment_Manager
 
 
@@ -11,9 +12,9 @@ def input(key):
             env.toggle_camera()
 
 
-def main():
+def main(drones_queue: Queue, positions_queue: Queue):
     manager = Enviroment_Manager()
-    manager.run()
+    manager.run(drones_queue, positions_queue)
 
 
 if __name__ == '__main__':

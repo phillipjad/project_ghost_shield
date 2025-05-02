@@ -6,10 +6,11 @@ import multiprocessing as mp
 import random
 import signal
 import time
-from queue import Queue
+from multiprocessing import Queue
 from threading import Thread
 from time import sleep
 from typing import cast
+import simulation
 
 from constants.messaging_constants import MSG_STR_E, MSG_STR_INT_MAP
 from constants.path_constants import SYSTEM_CONFIG_PATH
@@ -21,6 +22,9 @@ from utils.graph_wrapper import DroneGraph
 from utils.read_write_lock import RWLock
 from utils.vector import Vector
 from wifi_lib import wifi_locator
+
+positions_queue: Queue = Queue()  # RF -> GUI
+drones_queue: Queue = Queue()     # GUI -> RF
 
 # CONSTANTS
 SYS_GRAPH: DroneGraph = DroneGraph(
@@ -463,7 +467,7 @@ def main(release: bool, positions_queue, drones_queue) -> None:
 
 
 if __name__ == "__main__":
-    mp.set_start_method("spawn")
+    mp.set_start_method("spawn", force=True)
     parser = argparse.ArgumentParser(
         prog="Project Ghost Shield - RF Simulation",
         description="***Proof of Concept Simulation for Project Ghost Shield***",
@@ -477,13 +481,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     release = args.release
 
-    # Import here to avoid circular imports
-    from envManager import positions_queue, drones_queue
-    import simulation
+
 
     # Start the GUI in a separate process
     gui_process = mp.Process(
         target=simulation.main,
+        args=[drones_queue, positions_queue],
         daemon=True
     )
     gui_process.start()
