@@ -1,4 +1,5 @@
-from multiprocessing import Queue   # Change this import
+from multiprocessing import Queue
+from typing import cast   # Change this import
 from ursina import time, window
 from ursina import *
 from time import sleep
@@ -14,14 +15,14 @@ class Enviroment_Manager:
         window.size = (800, 600)
         self.app = Ursina()
         self.environment = None
-        self.drones = []
+        self.drones: dict[str, GUIDrone] = {}
         Enviroment_Manager.instance = self
 
         # Load config
         with open("config/system_config.json", "r") as f:
             self.config = json.load(f)
 
-    def setup(self, drones_queue: Queue, positions_queue: Queue):
+    def setup(self):
         env_cfg = self.config["environment"]
         dims = env_cfg["dimensions"]
         assets = env_cfg["assets"]
@@ -34,41 +35,27 @@ class Enviroment_Manager:
         )
         self.environment.setup()
 
-        num_drones = len(self.config["drones"])
-        received_positions = {}
-
-        for _ in range(num_drones):
-            idx, x, y, z = positions_queue.get()
-            print("Received position for idx", idx, ":", (x, y, z))
-            received_positions[idx] = (x, y, z)
-
-        # Sort by index to match config
-        for idx in sorted(received_positions.keys()):
-            drone_cfg = self.config["drones"][idx]
-            starter_position = received_positions[idx]
-
+        for drone_config in self.config["drones"]:
             drone = GUIDrone(
-                starter_position=starter_position,
-                drone_id=drone_cfg["id"]
+                starter_position=(0, 0, 0),
+                drone_id=drone_config["id"]
             )
-            self.drones.append(drone)
+            self.drones[drone_config["id"]] = drone
 
-        drones_queue.put(self.drones)
-
-    def run(self, drones_queue: Queue, positions_queue: Queue, movement_queue: Queue):
+    def run(self, movement_queue: Queue, initialize_queue: Queue):
         # Create an update entity that will run every frame
         updater = Entity()
 
         # RF simulation thread is now started from rf_simulation.py
         # Just call setup to process the positions
-        self.setup(drones_queue, positions_queue)
+        self.setup()
 
         def update_function():
             # Process any movement commands in the queue
             try:
                 while not movement_queue.empty():
                     drone_id, x, y, z = movement_queue.get_nowait()
-                    if drone_id < len(self.drones):
+                    if drone_id in self.drones:
                         print(
                             f"GUI: Moving drone {drone_id} to ({x}, {y}, {z})")
                         self.drones[drone_id].move_to((x, y, z))
@@ -76,7 +63,7 @@ class Enviroment_Manager:
                 print(f"Error processing movement commands: {e}")
 
             # Regular updates for all drones
-            for drone in self.drones:
+            for drone in self.drones.values():
                 drone.update(time.dt)
 
             # Update the environment
@@ -84,5 +71,6 @@ class Enviroment_Manager:
 
         updater.update = update_function
 
+        initialize_queue.put("done")
         # Don't forget to actually run the app!
         self.app.run()

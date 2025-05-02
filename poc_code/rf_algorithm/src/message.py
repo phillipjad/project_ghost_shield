@@ -23,6 +23,7 @@ from message_objects.jammer_disabled import JammerDisabled
 from message_objects.jammer_enabled import JammerEnabled
 from message_objects.move_location import MoveLocation
 from message_objects.msg_obj_abc import MsgObject
+from message_objects.return_to_launch import ReturnToLaunch
 
 
 class Message:
@@ -164,6 +165,14 @@ class Message:
         msg = struct.pack(f"!{len(header)}s", header)
         return Message.sign_and_crc(msg)
 
+    @staticmethod
+    def get_return_to_launch(d_id: str) -> SignedMessage:
+        msg_type = MSG_STR_INT_MAP.get(MSG_STR_E.RETURN_TO_LAUNCH)
+
+        header: bytes = Header(d_id, msg_type, 0).to_bytes()
+        msg = struct.pack(f"!{len(header)}s", header)
+        return Message.sign_and_crc(msg)
+
     # Deserializing methods
     @staticmethod
     def curr_loc(msg: SignedMessage) -> "Message":
@@ -248,6 +257,14 @@ class Message:
         header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
         payload = JammerDisabled.deserialize(msg[HEADER_SIZE_BYTES:])[1]
         return Message(header, payload)
+    
+    @staticmethod
+    def return_to_launch(msg: SignedMessage) -> "Message":
+        msg = Message.check_crc_and_signature(msg)
+        header = Header.from_bytes(msg[0:HEADER_SIZE_BYTES])
+        payload = ReturnToLaunch.deserialize(msg[HEADER_SIZE_BYTES:])[1]
+        return Message(header, payload)
+    
 
     @staticmethod
     def deserialize_msg(msg: SignedMessage) -> Optional["Message"]:
@@ -264,6 +281,7 @@ class Message:
             MSG_STR_INT_MAP[MSG_STR_E.COMMAND_ACK]: Message.command_ack,
             MSG_STR_INT_MAP[MSG_STR_E.JAMMER_ENABLED]: Message.jammer_enabled,
             MSG_STR_INT_MAP[MSG_STR_E.JAMMER_DISABLED]: Message.jammer_disabled,
+            MSG_STR_INT_MAP[MSG_STR_E.RETURN_TO_LAUNCH]: Message.jammer_disabled,
         }
 
         try:
@@ -287,6 +305,7 @@ class Message:
             MSG_STR_INT_MAP.get(MSG_STR_E.COMMAND_ACK): Message.get_command_ack,
             MSG_STR_INT_MAP.get(MSG_STR_E.JAMMER_ENABLED): Message.get_jammer_enabled,
             MSG_STR_INT_MAP.get(MSG_STR_E.JAMMER_DISABLED): Message.get_jammer_disabled,
+            MSG_STR_INT_MAP.get(MSG_STR_E.RETURN_TO_LAUNCH): Message.get_return_to_launch,
         }
 
         try:
