@@ -22,6 +22,15 @@ class CurrentLocation(MsgObject):
 
     @staticmethod
     def deserialize(payload: bytes, offset: int = 0) -> tuple[int, "CurrentLocation"]:
+        """Deserializes a byte payload to extract a CurrentLocation message.
+
+        Args:
+            payload (bytes): The byte stream to deserialize.
+            offset (int): Byte offset to begin deserialization (Defaults to 0).
+            
+        Returns:
+            tuple[int, CurrentLocation]: the new offset and a deserialized CurrentLocation instance.
+        """   
         x, y, z = struct.unpack_from("!ddd", payload, offset)
         offset += 24
         return (offset, CurrentLocation(x, y, z))

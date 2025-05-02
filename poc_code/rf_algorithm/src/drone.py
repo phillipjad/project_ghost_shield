@@ -250,8 +250,16 @@ class Drone:
             return True
         return False
 
-
 def send_ack(msg: SignedMessage, tcp_socket: TCPSocket, ip: str, port: int, timeout: int = 1) -> None:
+    """Sends an acknowledgment message to the specified IP and port using a TCP socket.
+
+    Args:
+        msg (SignedMessage): message to be sent
+        tcp_socket (TCPSocket): TCP socket object used for sending the message
+        ip (str): IP address of the destination
+        port (int): Port number of the destination
+        timeout (int, optional): Timeout for the socket connection. Defaults to 2 seconds.
+    """     
     tcp_socket.connect(ip=ip, port=port)
     # After connect we now have a socket. Add timeout
     tcp_socket.sock.settimeout(timeout)
