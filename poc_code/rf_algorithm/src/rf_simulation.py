@@ -550,6 +550,18 @@ def main(release: bool) -> None:
 
         check_drones_are_jamming()
 
+        # 🔁 RETURN TO LAUNCH (RTL)
+        print("Returning all drones to controller's location...")
+        for drone in DRONE_MAP.values():
+            CONTROLLER_SEND_QUEUE.put((
+                MSG_STR_INT_MAP[MSG_STR_E.RETURN_TO_LAUNCH],
+                [drone.get_id(), drone.drone_tcp_ip, drone.drone_tcp_port],
+                None
+            ))
+
+        # Give drones time to return before shutdown (optional)
+        time.sleep(2)
+
         sig_handler(None, None)
     except KeyboardInterrupt:
         sig_handler(None, None)
