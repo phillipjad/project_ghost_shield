@@ -102,7 +102,8 @@ def register_drones() -> int:
 
     return_list: list[int] = []
     # Wait for drones to register
-    check_drones_registered_thread = Thread(target=check_drones_registered, args=[return_list], daemon=True)
+    check_drones_registered_thread = Thread(
+        target=check_drones_registered, args=[return_list], daemon=True)
     check_drones_registered_thread.start()
     check_drones_registered_thread.join(REGISTRATION_TIMEOUT)
     num_drones_registered = return_list[0] if return_list else 0
@@ -139,7 +140,8 @@ def get_drone_location(drone_id: str, drone_ip: str, drone_port: int) -> tuple[f
     )
 
     return_list = []
-    check_location_thread = Thread(target=check_location_response, args=[return_list], daemon=True)
+    check_location_thread = Thread(target=check_location_response, args=[
+                                   return_list], daemon=True)
     check_location_thread.start()
     check_location_thread.join(10)
     drone_location = return_list[0] if return_list else None
@@ -156,9 +158,11 @@ def get_drones(drones_config: list[dict]) -> dict[str, Drone]:
         dict[str, Drone]: Dictionary of drone IDs and their corresponding Drone objects.
     """
     return {
-        drone["id"]: Drone(drone["id"], *get_drone_location(drone["id"], drone["ip"], drone["port"]), drone["ip"], drone["port"], False)
+        drone["id"]: Drone(drone["id"], *get_drone_location(drone["id"],
+                           drone["ip"], drone["port"]), drone["ip"], drone["port"], False)
         for drone in drones_config
     }
+
 
 def move_drone(drone: Drone, node_id: int, x: float, y: float, z: float) -> bool:
     """Move a drone to a new location.
@@ -178,7 +182,8 @@ def move_drone(drone: Drone, node_id: int, x: float, y: float, z: float) -> bool
             )
         )
         return_list = []
-        check_location_thread = Thread(target=check_location_response, args=[return_list], daemon=True)
+        check_location_thread = Thread(target=check_location_response, args=[
+                                       return_list], daemon=True)
         check_location_thread.start()
         check_location_thread.join(10)
         drone_location = return_list[0] if return_list else None
@@ -282,7 +287,8 @@ def drones_are_equidistant(controller_location: Vector) -> bool:
 
     return distances.count(distances[0]) == len(distances)
 
-def apply_rf_algorithm(field_vector: Vector) -> None:
+
+def apply_rf_algorithm(field_vector: Vector, idx_to_guidrone: dict[int, object]) -> None:
     global SYS_GRAPH
 
     x_size, y_size, z_size = field_vector.get_internals_as_tuple()
@@ -309,27 +315,38 @@ def apply_rf_algorithm(field_vector: Vector) -> None:
             if edge_data.get_last_to_write() != out_id:
                 distance_vector = distance_vector.as_negated()
 
-            curr_force_vector = distance_vector.calculate_force(min_distance, repulsion_strength)
+            curr_force_vector = distance_vector.calculate_force(
+                min_distance, repulsion_strength)
             force_vector.mutating_vector_sum(curr_force_vector)
         force_vector_components = force_vector.get_internals_as_tuple()
         new_x = (
-            SYS_GRAPH.get_node_data(out_id).get_x() + force_vector_components[0] * damping
+            SYS_GRAPH.get_node_data(out_id).get_x() +
+            force_vector_components[0] * damping
         )  # calculate the new x coordinate
         new_y = (
-            SYS_GRAPH.get_node_data(out_id).get_y() + force_vector_components[1] * damping
+            SYS_GRAPH.get_node_data(out_id).get_y() +
+            force_vector_components[1] * damping
         )  # calculate the new y coordinate
         new_z = (
-            SYS_GRAPH.get_node_data(out_id).get_z() + force_vector_components[2] * damping
+            SYS_GRAPH.get_node_data(out_id).get_z() +
+            force_vector_components[2] * damping
         )  # calculate the new z coordinate
-
-        print(f'Moving drone {out_id} to ({max(0, min(new_x, x_size))}, {max(0, min(new_y, y_size))}, {max(0, min(new_z, z_size))})')
+        print(
+            f'Moving drone {out_id} to ({max(0, min(new_x, x_size))}, {max(0, min(new_y, y_size))}, {max(0, min(new_z, z_size))})')
         if (out_id not in last_move_map) or (
-            last_move_map[out_id] != (max(0, min(new_x, x_size)), max(0, min(new_y, y_size)), max(0, min(new_z, z_size)))
+            last_move_map[out_id] != (max(0, min(new_x, x_size)), max(
+                0, min(new_y, y_size)), max(0, min(new_z, z_size)))
         ):
             if move_drone(SYS_GRAPH.get_node_data(out_id), out_id, max(0, min(new_x, x_size)), max(0, min(new_y, y_size)), max(0, min(new_z, z_size))):
-                repulsion_strength = repulsion_strength if iterations <= 30 else max(min_repulsion_strength, repulsion_strength * math.exp(-0.001 * iterations))
+                if out_id in idx_to_guidrone:
+                    gui_drone = idx_to_guidrone[out_id]
+                    gui_drone.move_to((new_x, new_y, new_z))
+
+                repulsion_strength = repulsion_strength if iterations <= 30 else max(
+                    min_repulsion_strength, repulsion_strength * math.exp(-0.001 * iterations))
                 damping = max(0.5, 2.0 * math.exp(-0.02 * iterations))
-                last_move_map[out_id] = (max(0, min(new_x, x_size)), max(0, min(new_y, y_size)), max(0, min(new_z, z_size)))
+                last_move_map[out_id] = (max(0, min(new_x, x_size)), max(
+                    0, min(new_y, y_size)), max(0, min(new_z, z_size)))
         else:
             finished_ids.add(out_id)
         iterations += 1
@@ -346,6 +363,7 @@ def enable_jamming(duration: float) -> None:
         )
     )
 
+
 def check_jamming_response(return_list: list[bool], num_drones: int) -> None:
     try:
         jamming_response = CONTROLLER_RECV_QUEUE.get(block=False)
@@ -355,9 +373,11 @@ def check_jamming_response(return_list: list[bool], num_drones: int) -> None:
     except Exception:
         return
 
+
 def check_drones_are_jamming() -> None:
     return_list = []
-    check_jamming_thread = Thread(target=check_jamming_response, args=[return_list, len(DRONES_CONFIG)], daemon=True)
+    check_jamming_thread = Thread(target=check_jamming_response, args=[
+                                  return_list, len(DRONES_CONFIG)], daemon=True)
     check_jamming_thread.start()
     check_jamming_thread.join(10)
     jamming_status = return_list[0] if return_list else False
@@ -365,7 +385,7 @@ def check_drones_are_jamming() -> None:
         print(f"Jamming status: {jamming_status}")
 
 
-def main(release: bool) -> None:
+def main(release: bool, positions_queue, drones_queue) -> None:
     global SYS_GRAPH
     if release:
         controller_vector = Vector(
@@ -413,11 +433,18 @@ def main(release: bool) -> None:
         # Randomize locations of drones
         for idx, drone in enumerate(SYS_GRAPH.nodes()):
             drone = cast(Drone, drone)
-            move_drone(drone, idx, random.random() + controller_vector.x, random.random() + controller_vector.y, random.random() + controller_vector.z)
+            move_drone(drone, idx, random.random() + controller_vector.x,
+                       random.random() + controller_vector.y, random.random() + controller_vector.z)
+            positions_queue.put(
+                (idx, drone.get_x(), drone.get_y(), drone.get_z()))
 
+        gui_drones = drones_queue.get()
+
+        idx_to_guidrone = {idx: gui_drones[idx]
+                           for idx in range(len(gui_drones))}
 
         while not drones_are_equidistant(controller_vector):
-            apply_rf_algorithm(field_dimensions)
+            apply_rf_algorithm(field_dimensions, idx_to_guidrone)
             print("STILL NOT EQUIDISTANT")
             # print(SYS_GRAPH)
 
@@ -449,4 +476,21 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     release = args.release
-    main(release)
+    
+    # Start the environment manager in a separate thread
+    from envManager import positions_queue, drones_queue
+    import simulation
+
+    # Start the GUI simulation in a separate thread
+    gui_thread = Thread(
+        target=simulation.main,
+        daemon=True
+    )
+    gui_thread.start()
+
+    # Give the GUI time to initialize
+    sleep(1)
+
+    # Run the RF algorithm in the main thread
+    # This will communicate with the GUI thread through the queues
+    main(release, positions_queue, drones_queue)
