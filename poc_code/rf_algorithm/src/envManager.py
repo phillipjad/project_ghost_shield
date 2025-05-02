@@ -1,7 +1,7 @@
 from queue import Queue
 from threading import Thread
 import multiprocessing as mp
-from typing import cast   # Change this import
+from typing import cast   # Change, his import
 from ursina import time, window
 from ursina import *
 from time import sleep
@@ -15,7 +15,7 @@ class Enviroment_Manager:
     instance = None
 
     def __init__(self):
-        window.size = (2560, 1440)
+        window.size = (1500, 1000)
         self.app = Ursina()
         self.environment = None
         self.drones: dict[str, GUIDrone] = {}
