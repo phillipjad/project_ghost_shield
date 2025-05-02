@@ -6,6 +6,7 @@ import json
 from environment import Environment
 from GUIdrone import GUIDrone
 
+
 class Enviroment_Manager:
     instance = None
 
@@ -54,7 +55,7 @@ class Enviroment_Manager:
 
         drones_queue.put(self.drones)
 
-    def run(self, drones_queue: Queue, positions_queue: Queue):
+    def run(self, drones_queue: Queue, positions_queue: Queue, movement_queue: Queue):
         # Create an update entity that will run every frame
         updater = Entity()
 
@@ -63,6 +64,17 @@ class Enviroment_Manager:
         self.setup(drones_queue, positions_queue)
 
         def update_function():
+            # Process any movement commands in the queue
+            try:
+                while not movement_queue.empty():
+                    drone_id, x, y, z = movement_queue.get_nowait()
+                    if drone_id < len(self.drones):
+                        print(
+                            f"GUI: Moving drone {drone_id} to ({x}, {y}, {z})")
+                        self.drones[drone_id].move_to((x, y, z))
+            except Exception as e:
+                print(f"Error processing movement commands: {e}")
+
             # Regular updates for all drones
             for drone in self.drones:
                 drone.update(time.dt)

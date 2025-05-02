@@ -25,6 +25,7 @@ from wifi_lib import wifi_locator
 
 positions_queue: Queue = Queue()  # RF -> GUI
 drones_queue: Queue = Queue()     # GUI -> RF
+movement_queue = mp.Queue()       # For sending movement commands to GUI
 
 # CONSTANTS
 SYS_GRAPH: DroneGraph = DroneGraph(
@@ -342,9 +343,11 @@ def apply_rf_algorithm(field_vector: Vector, idx_to_guidrone: dict[int, object])
                 0, min(new_y, y_size)), max(0, min(new_z, z_size)))
         ):
             if move_drone(SYS_GRAPH.get_node_data(out_id), out_id, max(0, min(new_x, x_size)), max(0, min(new_y, y_size)), max(0, min(new_z, z_size))):
-                if out_id in idx_to_guidrone:
-                    gui_drone = idx_to_guidrone[out_id]
-                    gui_drone.move_to((new_x, new_y, new_z))
+                # Instead of calling gui_drone.move_to directly:
+                # Queue the movement command with drone index and clamped coordinates
+                movement_queue.put((out_id, max(0, min(new_x, x_size)),
+                                    max(0, min(new_y, y_size)),
+                                    max(0, min(new_z, z_size))))
 
                 repulsion_strength = repulsion_strength if iterations <= 30 else max(
                     min_repulsion_strength, repulsion_strength * math.exp(-0.001 * iterations))
@@ -480,8 +483,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     release = args.release
-
-
 
     # Start the GUI in a separate process
     gui_process = mp.Process(
