@@ -4,28 +4,22 @@ This module contains the core repulsive-force simulation and drone control logic
 
 ---
 
-## 📦 Setup Instructions (Using `uv`)
+## Setup Instructions (Using `uv`)
 
-> ✅ Requires Python **3.11+** and [`uv`](https://github.com/astral-sh/uv)
+> Requires Python **3.11+** and [`uv`](https://github.com/astral-sh/uv)
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/your-username/project_ghost_shield.git
-cd project_ghost_shield/rf_algorithm
-```
-
-### 2. Create a Virtual Environment
+### 1. Create a Virtual Environment
 ```bash
 uv venv --python 3.11
 ```
 
-### 3. Activate the Environment
+### 2. Activate the Environment
 ```bash
 source .venv/bin/activate  # macOS/Linux
 source .venv\Scripts\activate     # Windows
 ```
 
-### 4. Install Dependencies
+### 3. Install Dependencies
 
 If you're using `pyproject.toml`:
 ```bash
@@ -34,7 +28,7 @@ uv sync
 
 ---
 
-## 🚀 Run the Simulation
+## Run the Simulation
 
 ```bash
 uv run rf_simulation.py
@@ -44,7 +38,7 @@ uv run rf_simulation.py
 
 ---
 
-## 📁 Folder Structure
+## Folder Structure
 
 ```
 rf_algorithm/

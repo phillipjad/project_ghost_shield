@@ -1,6 +1,9 @@
 ### Environment Setup
 - Forewarning
 	- All instructions described below are for a Windows (10/11) machine using git bash
+- Clone the Repository
+	- git clone https://github.com/your-username/project_ghost_shield.git
+	- cd project_ghost_shield/rf_algorithm
 - Install Git Bash
 	- [Git/Git Bash installer Download](https://git-scm.com/downloads/win)
 - Python Installation
