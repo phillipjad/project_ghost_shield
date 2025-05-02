@@ -522,7 +522,6 @@ def main(release: bool) -> None:
         ):
             apply_rf_algorithm(operational_ceiling, field_dimensions, controller_vector, last_move_map, finished_ids)
         print(f"Time taken to space: {time.perf_counter() - s:.2f} seconds")
-        print(SYS_GRAPH)
 
         # Drones are equidistant, so now we can enable jamming
         print("Spaced! Begin jamming")
