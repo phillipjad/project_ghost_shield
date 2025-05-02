@@ -274,7 +274,7 @@ def update_egress_edges(node_id: int) -> None:
         update_graph_edge(edge[0], edge[1], edge[2])
 
 
-def drones_are_spaced_properly(controller_location: Vector, two_recent_distance_magnitudes: list[float, float]) -> bool:
+def drones_are_spaced_properly(controller_location: Vector, two_recent_distance_magnitudes: list[float, float], tolerance: float) -> bool:
     global SYS_GRAPH
 
     magnitude_sum: float = 0.0
@@ -287,7 +287,23 @@ def drones_are_spaced_properly(controller_location: Vector, two_recent_distance_
 
     two_recent_distance_magnitudes[0] = two_recent_distance_magnitudes[1]
     two_recent_distance_magnitudes[1] = magnitude_sum
-    return distances.count(distances[0]) == len(distances)
+    mean_distance: float = sum(distances) / len(distances)
+    return all(abs(d - mean_distance) < tolerance for d in distances)
+
+
+def all_drones_stable(last_move_map: dict[str, tuple[float, float, float]], threshold: float = 0.01) -> bool:
+    return all(
+        (x**2 + y**2 + z**2)**0.5 < threshold
+        for x, y, z in last_move_map.values()
+    )
+
+def clamp_position_to_radius(vector: Vector, controller_vector: Vector, force_function: callable = lambda ic, f, d: calculate_force_severe_dropoff(ic, f, d), max_radius: float = 30.0) -> Vector:
+    to_controller = vector.vector_sum(controller_vector.as_negated())
+    if to_controller.get_magnitude() > max_radius:
+        # Pull gently toward the controller
+        return to_controller.calculate_force(0.01, 1.0, force_function).as_negated()
+    return Vector(0.0, 0.0, 0.0)
+
 
 
 def calculate_force_severe_dropoff(
@@ -356,7 +372,7 @@ def apply_rf_algorithm(
     global SYS_GRAPH
 
     controller_x, controller_y, controller_z = controller_vector.get_internals_as_tuple()
-    field_x, field_y, _field_z = field_vector.get_internals_as_tuple()
+    field_x, field_y, field_z = field_vector.get_internals_as_tuple()
     min_x_bound = controller_x - field_x / 2
     min_y_bound = controller_y - field_y / 2
     max_x_bound = controller_x + field_x / 2
@@ -367,7 +383,7 @@ def apply_rf_algorithm(
     repulsion_strength = max_repulsion_strength
     damping = 0.5  # how much of the force to apply
     min_distance = 0.1  # minimum distance between drones
-    collision_min_distance = ((field_x * field_y * (max_z_bound - operational_ceiling)) / SYS_GRAPH.num_nodes())**(1/3)
+    collision_min_distance = ((field_x * field_y * (field_z/2)) / SYS_GRAPH.num_nodes())**(1/3)
     iterations: int = 0
 
     for out_id in SYS_GRAPH.node_indices():
@@ -470,6 +486,9 @@ def main(release: bool) -> None:
     last_move_map: dict[str, tuple[float, float, float]] = {}
     finished_ids: set[int] = set()
     two_recent_distance_magnitudes: list[float, float] = [-1.0, -2.0]
+    field_dimensions = Vector(FIELD_CONFIG["x"], FIELD_CONFIG["y"], FIELD_CONFIG["z"])
+    operational_ceiling: int = SYSTEM_CONFIG["operational_ceiling"]
+    temperature: float = max(field_dimensions.x, field_dimensions.y, operational_ceiling) / 10.0
 
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -495,8 +514,6 @@ def main(release: bool) -> None:
         signal.signal(signal.SIGINT, sig_handler)
         signal.signal(signal.SIGTERM, sig_handler)
 
-        field_dimensions = Vector(FIELD_CONFIG["x"], FIELD_CONFIG["y"], FIELD_CONFIG["z"])
-        operational_ceiling: int = SYSTEM_CONFIG["operational_ceiling"]
 
         if not register_controller(controller_vector):
             raise RuntimeError("Failed to register controller")
@@ -517,10 +534,14 @@ def main(release: bool) -> None:
             )
 
         s = time.perf_counter()
-        while not drones_are_spaced_properly(controller_vector, two_recent_distance_magnitudes) and (
-            two_recent_distance_magnitudes[0] != two_recent_distance_magnitudes[1]
-        ):
+        while True:
             apply_rf_algorithm(operational_ceiling, field_dimensions, controller_vector, last_move_map, finished_ids)
+            temperature = max(temperature * 0.9, 0.01)
+            if drones_are_spaced_properly(controller_vector, two_recent_distance_magnitudes, 0.5) or (
+                (two_recent_distance_magnitudes[0] > 0 and two_recent_distance_magnitudes[1] > 0)
+                or all_drones_stable(last_move_map, 0.1)
+            ):
+                break
         print(f"Time taken to space: {time.perf_counter() - s:.2f} seconds")
 
         # Drones are equidistant, so now we can enable jamming

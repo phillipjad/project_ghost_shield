@@ -12,7 +12,8 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "cwd": "${workspaceFolder}/poc_code/rf_algorithm/src"
+            "cwd": "${workspaceFolder}/poc_code/rf_algorithm/src",
+            "args": ["-r"]
         }
     ]
 }

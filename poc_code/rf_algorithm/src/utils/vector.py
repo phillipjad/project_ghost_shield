@@ -93,6 +93,19 @@ class Vector:
             Vector: Resultant of vector sum.
         """
         return Vector(self.x + other_vector.x, self.y + other_vector.y, self.z + other_vector.z)
+    
+    def mutating_scalar_multiply(self, scalar: float) -> None:
+        """Calculates the vector product between the calling vector and a scalar. Returns resultant as new Vector object.
+
+        Args:
+            scalar (float): Scalar to multiply with.
+
+        Returns:
+            Vector: Resultant of vector product.
+        """
+        self.x *= scalar
+        self.y *= scalar
+        self.z *= scalar
 
     def mutating_vector_sum(self, other_vector: "Vector") -> None:
         """Mutates the internal state of the calling Vector by summing the
@@ -137,6 +150,14 @@ class Vector:
 
         # calculate the force between the drones the formula is f = repulsion_strength / distance^2
         # the closer the 2 drones the stronger the force
-        force = repulsion_strength / math.pow(distance, 2)
+        force = max(0.1, repulsion_strength / math.pow(distance, 1.5))
 
         return force_function(inner_components, force, distance)
+
+    def mutating_clamp_magnitude(self, max_magnitude: float) -> None:
+        current_magnitude = self.get_magnitude()
+        if current_magnitude > max_magnitude:
+            scale_factor = max_magnitude / current_magnitude
+            self.x *= scale_factor
+            self.y *= scale_factor
+            self.z *= scale_factor
