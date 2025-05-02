@@ -227,20 +227,7 @@ class Drone:
         return f"ID: {self.id}\nX: {self.x}\nY: {self.y}\nZ: {self.z}\n"
 
     # checks if two drones are equal by id, x, y, and z
-<<<<<<< HEAD
-    def __eq__(self, other) -> bool:
-        """Compares two Drone objects for equality based on their id and coordinates.
-
-        Args:
-            self (_type_): The current Drone object.
-            other (_type_): The other Drone object to compare against.
-
-        Returns:
-            bool: True if the drones are equal (same id and coordinates), False otherwise.
-        """        
-=======
     def __eq__(self, other: any) -> bool:
->>>>>>> implement_drone_multiprocessing
         if not isinstance(other, Drone):
             return False  # don't attempt to compare against unrelated types
         if self.id == other.id and self.x == other.get_x() and self.y == other.get_y() and self.z == other.get_z():
