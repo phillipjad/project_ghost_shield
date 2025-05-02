@@ -220,8 +220,7 @@ def populate_graph(refresh: bool = False) -> True:
 
 
 def update_graph_edges() -> None:
-    """
-    Updates the edges of the graph with the current distance between every Drone.
+    """Updates the edges of the graph with the current distance between every Drone.
     """
     global SYS_GRAPH
 
@@ -259,6 +258,13 @@ def update_graph_edge(node1_id: int, node2_id: int, edge_data: Distance) -> None
 
 
 def update_egress_edges(node_id: int) -> None:
+    """Updates only the outgoing edges of the graph of a given node.
+    This is useful for when a drone moves and we want to update the edges
+    that are outgoing from that drone.
+
+    Args:
+        node_id (int): node ID of the drone to update edges for
+    """
     global SYS_GRAPH
     edges: list[tuple[int, int, Distance]] = SYS_GRAPH.out_edges(node_id)
     for edge in edges:

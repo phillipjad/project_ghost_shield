@@ -26,6 +26,14 @@ class Drone:
         is_process: bool = True,
         port: int = 50000,
     ) -> None:
+        """ Initializes the drone with the given id and coordinates.
+
+        Args:
+            id (str): gives the drone a unique id
+            x_coordinate (float): x coordinate of the drone
+            y_coordinate (float): y coordinate of the drone
+            z_coordinate (float): z coordinate of the drone
+        """
         self.id = id
         self.x = x_coordinate
         self.y = y_coordinate
@@ -48,6 +56,11 @@ class Drone:
         self.z += distance
 
     def move_from_vector(self, vector: Vector) -> None:
+        """"Moves the drone by the given vector.
+
+        Args:
+            vector (Vector): the vector to move the drone by
+        """
         # check if vector has exactly 3 components
         # checks if there should be no movement at all
         if vector.get_magnitude() == 0.0:

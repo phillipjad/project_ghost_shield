@@ -17,6 +17,8 @@ class Field:
         self.drones = drones
 
     def randomly_place_drones(self) -> None:
+        """Randomly places the drones in the field.
+        """
         for drone in self.drones:
             drone.move_x(random.randint(0, int(self.x_size - 1)))
             drone.move_y(random.randint(0, int(self.y_size - 1)))
@@ -33,6 +35,9 @@ class Field:
         return distances.count(distances[0]) == len(distances)
 
     def __str__(self) -> str:
+        """Returns a string representation of the field.
+        This includes the dimensions of the field and the drones in the field.
+        """
         return f"""
             Field with dimensions: [{self.x_size}, {self.y_size}, {self.z_size}]
             Drones: {str.join(chr(10), [str(d) for d in self.drones])}
