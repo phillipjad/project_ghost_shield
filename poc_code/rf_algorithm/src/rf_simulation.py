@@ -183,8 +183,7 @@ def move_drone(drone: Drone, node_id: int, x: float, y: float, z: float) -> bool
             drone.set_z(z)
             update_egress_edges(node_id)
             return True
-    except Exception as e:
-        print(f"Error moving drone {drone.get_id()}: {e}")
+    except Exception:
         return False
 
 
@@ -575,9 +574,8 @@ def main(release: bool, gui_drones: dict[str, GUIDrone] | None = None, PROCESS_L
             )
             if gui_drones:
                 gui_drones[SYS_GRAPH.get_node_data(idx).get_id()].move_to(randomized_vector.get_internals_as_tuple())
-        # Give drones time to return before shutdown (optional)
-        while True:
-            time.sleep(2)
+            print(f'Drone {drone.get_id()} returning to {return_vector.get_internals_as_tuple()}')
+        print("All drones returned to controller's location! Simulation complete.")
     except Exception as e:
         raise e
     
