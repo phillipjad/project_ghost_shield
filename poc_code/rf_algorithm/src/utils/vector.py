@@ -1,4 +1,5 @@
 import math
+from collections.abc import Callable
 
 
 class Vector:
@@ -41,9 +42,7 @@ class Vector:
         """
         return (self.x, self.y, self.z)
 
-    def _update_vector(
-        self, *, x: float | None = None, y: float | None = None, z: float | None = None
-    ) -> None:
+    def _update_vector(self, *, x: float | None = None, y: float | None = None, z: float | None = None) -> None:
         """Protected method to mutate the internal state of the calling vector.
 
         Args:
@@ -93,9 +92,20 @@ class Vector:
         Returns:
             Vector: Resultant of vector sum.
         """
-        return Vector(
-            self.x + other_vector.x, self.y + other_vector.y, self.z + other_vector.z
-        )
+        return Vector(self.x + other_vector.x, self.y + other_vector.y, self.z + other_vector.z)
+    
+    def mutating_scalar_multiply(self, scalar: float) -> None:
+        """Calculates the vector product between the calling vector and a scalar. Returns resultant as new Vector object.
+
+        Args:
+            scalar (float): Scalar to multiply with.
+
+        Returns:
+            Vector: Resultant of vector product.
+        """
+        self.x *= scalar
+        self.y *= scalar
+        self.z *= scalar
 
     def mutating_vector_sum(self, other_vector: "Vector") -> None:
         """Mutates the internal state of the calling Vector by summing the
@@ -117,7 +127,10 @@ class Vector:
         return Vector((-1 * self.x), (-1 * self.y), (-1 * self.z))
 
     def calculate_force(
-        self, min_distance: float, repulsion_strength: float
+        self,
+        min_distance: float,
+        repulsion_strength: float,
+        force_function: Callable[[tuple[float, float, float], float, float], "Vector"],
     ) -> "Vector":
         """Calculates a force vector based on the calling Vector's internal state,
         and a passed repulsion_strength. min_distance parameter ensures that at least
@@ -126,6 +139,8 @@ class Vector:
         Args:
             min_distance (float): Minimum distance that distance should be calculated as.
             repulsion_strength (float): Strength of repulsive force.
+            force_function (Callable): Function to use to calculate the force vector.
+                Should take the calling Vector's internal state, the force, and the distance as parameters.
 
         Returns:
             Vector: Force vector calculated from the calling Vector's internal state and the provided repulsion_strength parameter.
@@ -135,10 +150,14 @@ class Vector:
 
         # calculate the force between the drones the formula is f = repulsion_strength / distance^2
         # the closer the 2 drones the stronger the force
-        force = repulsion_strength / math.pow(distance, 2)
+        force = max(0.1, repulsion_strength / math.pow(distance, 1.5))
 
-        return Vector(
-            ((inner_components[0] / distance) * force),
-            ((inner_components[1] / distance) * force),
-            ((inner_components[2] / distance) * force),
-        )
+        return force_function(inner_components, force, distance)
+
+    def mutating_clamp_magnitude(self, max_magnitude: float) -> None:
+        current_magnitude = self.get_magnitude()
+        if current_magnitude > max_magnitude:
+            scale_factor = max_magnitude / current_magnitude
+            self.x *= scale_factor
+            self.y *= scale_factor
+            self.z *= scale_factor
